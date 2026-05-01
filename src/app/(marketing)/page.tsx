@@ -1,6 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
-  Zap,
   ArrowRight,
   Play,
   Layers,
@@ -8,6 +8,7 @@ import {
   Shield,
   BarChart3,
   ChevronRight,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -40,10 +41,11 @@ function Navbar() {
     <header className="sticky top-0 z-50 border-b border-border glass">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-primary shadow-glow-sm">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-bold text-text-primary tracking-tight">Fixora</span>
+          <Image src="/logo.png" alt="Fixora Video" width={28} height={28} className="rounded-lg" />
+          <span className="font-bold tracking-tight">
+            <span className="text-text-primary">Fixora</span>{" "}
+            <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">Video</span>
+          </span>
         </Link>
 
         <div className="hidden items-center gap-6 md:flex">
@@ -108,7 +110,7 @@ function HeroSection() {
         <p className="mx-auto mb-10 max-w-2xl text-lg text-text-secondary leading-relaxed">
           Turn your ideas into professional social media videos with AI. Write a
           prompt, structure your scenes, choose your visual style — and let
-          Fixora do the rest.
+          Fixora Video do the rest.
         </p>
 
         {/* CTAs */}
@@ -256,7 +258,7 @@ function FeaturesSection() {
             Everything you need to create
           </h2>
           <p className="mx-auto max-w-xl text-text-secondary">
-            From idea to published video — Fixora handles the complexity so you
+            From idea to published video — Fixora Video handles the complexity so you
             can focus on your message.
           </p>
         </div>
@@ -498,7 +500,7 @@ function CtaSection() {
             Ready to create your first video?
           </h2>
           <p className="mb-8 text-text-secondary">
-            Join creators who are already using Fixora to produce professional
+            Join creators who are already using Fixora Video to produce professional
             content with AI.
           </p>
           <Button size="lg" asChild>
@@ -522,13 +524,14 @@ function Footer() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-primary">
-              <Zap className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="font-semibold text-sm text-text-primary">Fixora</span>
+            <Image src="/logo.png" alt="Fixora Video" width={24} height={24} className="rounded-md" />
+            <span className="font-semibold text-sm">
+              <span className="text-text-primary">Fixora</span>{" "}
+              <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">Video</span>
+            </span>
           </div>
           <p className="text-xs text-text-muted">
-            © {new Date().getFullYear()} Fixora. All rights reserved.
+            © {new Date().getFullYear()} Fixora Video. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="text-xs text-text-muted hover:text-text-secondary transition-colors">

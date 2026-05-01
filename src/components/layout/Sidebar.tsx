@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -48,11 +49,12 @@ export function Sidebar({ userCredits = 0, userName, userEmail, userImage }: Sid
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-surface">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-primary shadow-glow-sm">
-          <Zap className="h-4 w-4 text-white" />
-        </div>
-        <span className="font-bold text-text-primary tracking-tight">Fixora</span>
+      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
+        <Image src="/logo.png" alt="Fixora Video" width={28} height={28} className="rounded-lg" />
+        <span className="font-bold tracking-tight">
+          <span className="text-text-primary">Fixora</span>{" "}
+          <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">Video</span>
+        </span>
       </div>
 
       {/* Create with AI button */}

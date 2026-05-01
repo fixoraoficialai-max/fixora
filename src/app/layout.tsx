@@ -11,25 +11,25 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Fixora — AI Video Generation",
-    template: "%s | Fixora",
+    default: "Fixora Video — AI Video Generation",
+    template: "%s | Fixora Video",
   },
   description:
     "Create stunning AI-powered videos for social media from prompts, scenes, and visual styles. Professional, fast, and scalable.",
   keywords: ["AI video", "video generation", "social media", "content creation", "AI tools"],
-  authors: [{ name: "Fixora" }],
-  creator: "Fixora",
+  authors: [{ name: "Fixora Video" }],
+  creator: "Fixora Video",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: process.env.NEXT_PUBLIC_APP_URL,
-    title: "Fixora — AI Video Generation",
+    title: "Fixora Video — AI Video Generation",
     description: "Create stunning AI-powered videos for social media.",
-    siteName: "Fixora",
+    siteName: "Fixora Video",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fixora — AI Video Generation",
+    title: "Fixora Video — AI Video Generation",
     description: "Create stunning AI-powered videos for social media.",
   },
   robots: {

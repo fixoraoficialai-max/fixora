@@ -1,5 +1,6 @@
-import { auth } from "@/lib/auth/config";
+import NextAuth from "next-auth";
 import { NextResponse, type NextRequest } from "next/server";
+import { authConfigEdge } from "@/lib/auth/config.edge";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -7,8 +8,7 @@ const PROTECTED_PREFIXES = ["/dashboard", "/projects", "/history", "/settings", 
 const AUTH_ROUTES        = ["/login", "/register"];
 
 // ─── Lightweight in-memory rate limiter ───────────────────────────────────────
-// Runs in Edge Runtime — no external dependencies, minimal bundle size.
-// Provides a fast first gate. Redis rate limiting runs inside API routes (Node.js).
+// No external deps — keeps Edge bundle small.
 
 interface IpEntry { count: number; windowStart: number; }
 const ipStore = new Map<string, IpEntry>();
@@ -45,11 +45,11 @@ function extractIp(req: NextRequest): string {
 function isIpAllowed(ip: string, pathname: string): boolean {
   if (ip === "unknown" || ip === "::1" || ip === "127.0.0.1") return true;
 
-  const tier              = getIpTier(pathname);
+  const tier               = getIpTier(pathname);
   const { limit, windowMs } = IP_LIMITS[tier];
-  const key               = `${tier}:${ip}`;
-  const now               = Date.now();
-  const entry             = ipStore.get(key);
+  const key                = `${tier}:${ip}`;
+  const now                = Date.now();
+  const entry              = ipStore.get(key);
 
   if (!entry || now - entry.windowStart > windowMs) {
     ipStore.set(key, { count: 1, windowStart: now });
@@ -75,6 +75,10 @@ function rateLimitedResponse(tier: Tier): NextResponse {
   );
 }
 
+// ─── Auth instance (Edge-compatible — no Prisma, no bcrypt) ──────────────────
+
+const { auth } = NextAuth(authConfigEdge);
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
 export default auth((req) => {
@@ -82,8 +86,7 @@ export default auth((req) => {
   const path = nextUrl.pathname;
   const ip   = extractIp(req);
 
-  // 1. Rate limit — lightweight in-memory gate (Edge-compatible, <1 MB)
-  //    Deep Redis rate limiting runs inside API routes (Node.js runtime).
+  // 1. Rate limit
   if (!isIpAllowed(ip, path)) {
     return rateLimitedResponse(getIpTier(path));
   }

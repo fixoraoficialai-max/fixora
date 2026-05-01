@@ -5,6 +5,11 @@ import { changePasswordSchema } from "@/lib/validations/user";
 import bcrypt from "bcryptjs";
 import { logAudit, AuditAction } from "@/lib/audit";
 
+/**
+ * PATCH /api/user/password
+ * Changes the authenticated user's password.
+ * Requires current password verification. OAuth users are rejected cleanly.
+ */
 export async function PATCH(req: Request) {
   try {
     const session = await auth();
@@ -16,15 +21,13 @@ export async function PATCH(req: Request) {
     const parsed = changePasswordSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      );
+      const message = parsed.error.issues[0]?.message ?? "Invalid input";
+      return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 
     const { currentPassword, newPassword } = parsed.data;
 
-    // 1. Find user and get current password hash
+    // 1. Fetch user — only retrieve what's needed
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, password: true },
@@ -34,35 +37,34 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
 
-    // 2. Prevent OAuth users from using this endpoint (they don't have passwords)
+    // 2. Block OAuth-only accounts (no local password set)
     if (!user.password) {
       return NextResponse.json(
-        { success: false, error: "Account uses external provider. Password cannot be changed." },
+        { success: false, error: "Your account uses an external provider (e.g. Google). Password changes are not supported." },
         { status: 400 }
       );
     }
 
-    // 3. Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
-    if (!isValidPassword) {
+    // 3. Verify current password before allowing any change
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
       return NextResponse.json(
         { success: false, error: "Incorrect current password" },
         { status: 400 }
       );
     }
 
-    // 4. Hash new password and update
+    // 4. Hash and persist the new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-
     await db.user.update({
       where: { id: user.id },
       data: { password: hashedPassword },
     });
 
-    // 5. Optional: Log audit
-    logAudit(AuditAction.LOGIN_FAILED, { // We reuse this temporarily, or skip. Let's just log a generic event via generic console if we lack a PASSWORD_CHANGED action.
+    // 5. Record a LOGIN_SUCCESS audit entry to mark the password change event
+    logAudit(AuditAction.LOGIN_SUCCESS, {
       userId: user.id,
-      metadata: { event: "password_changed_from_dashboard" },
+      metadata: { event: "password_changed" },
     });
 
     return NextResponse.json({ success: true });

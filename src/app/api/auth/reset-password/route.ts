@@ -10,10 +10,8 @@ export async function POST(req: Request) {
     const parsed = resetPasswordSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      );
+      const message = parsed.error.issues[0]?.message ?? "Invalid input";
+      return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 
     const { password, token } = parsed.data;
@@ -64,10 +62,10 @@ export async function POST(req: Request) {
       where: { token },
     });
 
-    // 6. Log the audit event (optional but good for security)
-    logAudit(AuditAction.LOGIN_FAILED, { // We don't have a specific reset action, we can just skip or use something generic if needed. We will skip for now.
+    // 6. Log audit event for security traceability
+    logAudit(AuditAction.LOGIN_SUCCESS, {
       userId: user.id,
-      metadata: { event: "password_reset" },
+      metadata: { event: "password_reset_completed" },
     });
 
     return NextResponse.json({ success: true });

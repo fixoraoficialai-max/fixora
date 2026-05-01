@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { changePasswordSchema, type ChangePasswordInput } from "@/lib/validations/user";
-import { FormField } from "@/components/ui/form-field";
-import { Input } from "@/components/ui/input";
+import { Input, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, CheckCircle2 } from "lucide-react";
 

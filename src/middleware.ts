@@ -1,18 +1,37 @@
 import { auth } from "@/lib/auth/config";
 import { NextResponse, type NextRequest } from "next/server";
-import { checkRedisRateLimit, classifyTier } from "@/lib/redis";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PROTECTED_PREFIXES = ["/dashboard", "/projects", "/history", "/settings", "/create"];
 const AUTH_ROUTES        = ["/login", "/register"];
 
-// ─── IP Extraction ────────────────────────────────────────────────────────────
+// ─── Lightweight in-memory rate limiter ───────────────────────────────────────
+// Runs in Edge Runtime — no external dependencies, minimal bundle size.
+// Provides a fast first gate. Redis rate limiting runs inside API routes (Node.js).
 
-/**
- * Extracts the real client IP from proxy headers.
- * Priority: Cloudflare → Nginx → Load balancer → unknown
- */
+interface IpEntry { count: number; windowStart: number; }
+const ipStore = new Map<string, IpEntry>();
+
+const IP_LIMITS = {
+  auth: { limit: 20,  windowMs: 60_000 },
+  api:  { limit: 120, windowMs: 60_000 },
+  page: { limit: 300, windowMs: 60_000 },
+} as const;
+
+type Tier = keyof typeof IP_LIMITS;
+
+function getIpTier(pathname: string): Tier {
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/verify-email"
+  ) return "auth";
+  if (pathname.startsWith("/api")) return "api";
+  return "page";
+}
+
 function extractIp(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for");
   return (
@@ -23,16 +42,34 @@ function extractIp(req: NextRequest): string {
   );
 }
 
-/** Returns a 429 Too Many Requests response. */
-function rateLimitedResponse(limit: number): NextResponse {
+function isIpAllowed(ip: string, pathname: string): boolean {
+  if (ip === "unknown" || ip === "::1" || ip === "127.0.0.1") return true;
+
+  const tier              = getIpTier(pathname);
+  const { limit, windowMs } = IP_LIMITS[tier];
+  const key               = `${tier}:${ip}`;
+  const now               = Date.now();
+  const entry             = ipStore.get(key);
+
+  if (!entry || now - entry.windowStart > windowMs) {
+    ipStore.set(key, { count: 1, windowStart: now });
+    return true;
+  }
+
+  if (entry.count >= limit) return false;
+  entry.count += 1;
+  return true;
+}
+
+function rateLimitedResponse(tier: Tier): NextResponse {
   return new NextResponse(
     JSON.stringify({ success: false, error: { code: "RATE_LIMITED", message: "Too many requests" } }),
     {
       status: 429,
       headers: {
-        "Content-Type": "application/json",
-        "Retry-After":  "60",
-        "X-RateLimit-Limit": String(limit),
+        "Content-Type":      "application/json",
+        "Retry-After":       "60",
+        "X-RateLimit-Limit": String(IP_LIMITS[tier].limit),
       },
     }
   );
@@ -40,23 +77,18 @@ function rateLimitedResponse(limit: number): NextResponse {
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-export default auth(async (req) => {
+export default auth((req) => {
   const { nextUrl, auth: session } = req;
   const path = nextUrl.pathname;
   const ip   = extractIp(req);
 
-  // 1. Redis Rate Limit — skip localhost in development
-  if (ip !== "unknown" && ip !== "::1" && ip !== "127.0.0.1") {
-    const tier   = classifyTier(path);
-    const result = await checkRedisRateLimit(ip, tier);
-
-    if (!result.allowed) {
-      const limits = { auth: 20, api: 120, page: 300 };
-      return rateLimitedResponse(limits[tier]);
-    }
+  // 1. Rate limit — lightweight in-memory gate (Edge-compatible, <1 MB)
+  //    Deep Redis rate limiting runs inside API routes (Node.js runtime).
+  if (!isIpAllowed(ip, path)) {
+    return rateLimitedResponse(getIpTier(path));
   }
 
-  // 2. Auth guard — redirect unauthenticated users away from protected routes
+  // 2. Auth guard
   const isLoggedIn  = !!session?.user;
   const isProtected = PROTECTED_PREFIXES.some((prefix) => path.startsWith(prefix));
   const isAuthRoute = AUTH_ROUTES.includes(path);

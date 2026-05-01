@@ -1,0 +1,227 @@
+// Fixora — Prisma Schema
+// PostgreSQL + NextAuth v5 compatible
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// AUTH MODELS (NextAuth v5 / Auth.js required)
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?   // null for OAuth users
+  image         String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  projects   Project[]
+  videos     Video[]
+  credits    UserCredits?
+  generatedImages GeneratedImage[]
+  auditLogs  AuditLog[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────────────────────────
+// BUSINESS MODELS
+// ─────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?       @db.Text
+  status      ProjectStatus @default(DRAFT)
+  aspectRatio AspectRatio   @default(LANDSCAPE)
+  platform    String?       // instagram, tiktok, youtube, etc.
+  userId      String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenes Scene[]
+  videos Video[]
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model Scene {
+  id           String   @id @default(cuid())
+  order        Int
+  prompt       String   @db.Text
+  visualStyle  String?
+  tone         String?
+  duration     Int      @default(5) // seconds
+  narration    String?  @db.Text
+  notes        String?  @db.Text
+  projectId    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("scenes")
+}
+
+model Video {
+  id           String      @id @default(cuid())
+  status       VideoStatus @default(PENDING)
+  url          String?     // TODO:INTEGRATION — storage URL when video is ready
+  thumbnailUrl String?
+  duration     Int?        // total seconds
+  errorMessage String?     @db.Text
+  metadata     Json?       // provider-specific response data
+  creditsUsed  Int         @default(1)
+  projectId    String?
+  userId       String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([projectId])
+  @@map("videos")
+}
+
+model UserCredits {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(10) // free tier starts with 10 credits
+  lifetime  Int      @default(10) // total ever granted
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_credits")
+}
+
+model GeneratedImage {
+  id        String   @id @default(cuid())
+  userId    String
+  prompt    String   @db.Text
+  imageUrl  String
+  sceneText String?  @db.Text
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@map("generated_images")
+}
+
+model LoginAttempt {
+  id          String    @id @default(cuid())
+  email       String    @unique // normalized to lowercase at write time
+  count       Int       @default(0)
+  lockedUntil DateTime? // null = not locked
+  updatedAt   DateTime  @updatedAt
+
+  @@index([email])
+  @@map("login_attempts")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // AuditAction value — never a free string
+  userId    String?  // null for pre-auth events (failed login by unknown user)
+  ip        String?
+  metadata  Json?    // Non-sensitive context only — never passwords or secrets
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum AspectRatio {
+  LANDSCAPE  // 16:9
+  PORTRAIT   // 9:16
+  SQUARE     // 1:1
+}
+
+enum VideoStatus {
+  PENDING
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}

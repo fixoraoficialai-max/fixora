@@ -164,7 +164,7 @@ export function LoginForm() {
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-bold text-text-primary">Welcome back</h1>
-        <p className="mt-2 text-sm text-text-muted">Sign in to your Fixora account</p>
+        <p className="mt-2 text-sm text-text-muted">Sign in to your Fixora Video account</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">

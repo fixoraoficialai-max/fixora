@@ -5,6 +5,8 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { TopBar } from "@/components/layout/TopBar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ProfileEditForm } from "@/features/settings/components/ProfileEditForm";
+import { ChangePasswordForm } from "@/features/settings/components/ChangePasswordForm";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -15,7 +17,7 @@ export default async function SettingsPage() {
   const [user, credits] = await Promise.all([
     db.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, name: true, email: true, image: true, createdAt: true, role: true },
+      select: { id: true, name: true, email: true, image: true, createdAt: true, role: true, password: true },
     }),
     db.userCredits.findUnique({
       where: { userId: session.user.id },
@@ -47,10 +49,7 @@ export default async function SettingsPage() {
               <SettingRow label="Account type" value={user.role === "ADMIN" ? "Admin" : "Standard"} />
             </div>
 
-            {/* TODO:INTEGRATION — Profile edit form */}
-            <div className="mt-4 rounded-lg border border-dashed border-border bg-surface-elevated/50 p-3 text-xs text-text-muted text-center">
-              Profile editing coming soon
-            </div>
+            <ProfileEditForm initialName={user.name ?? ""} />
           </CardContent>
         </Card>
 
@@ -64,10 +63,7 @@ export default async function SettingsPage() {
             <CardDescription>Manage your password and security</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* TODO:INTEGRATION — Change password form */}
-            <div className="rounded-lg border border-dashed border-border bg-surface-elevated/50 p-3 text-xs text-text-muted text-center">
-              Password management coming soon
-            </div>
+            <ChangePasswordForm hasPassword={!!user.password} />
           </CardContent>
         </Card>
 

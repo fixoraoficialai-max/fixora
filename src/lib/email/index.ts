@@ -2,10 +2,10 @@ import { Resend } from "resend";
 
 /**
  * The "from" address for all transactional emails.
- * Dev: Resend's shared domain (no DNS needed).
- * Prod: change to your verified domain e.g. noreply@fixoravideo.com
+ * Set EMAIL_FROM in your environment to override.
+ * Default uses the verified Fixora Video domain.
  */
-const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Fixora <onboarding@resend.dev>";
+const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Fixora Video <noreply@fixoravideo.com>";
 
 /**
  * Returns a Resend client instance on demand.

@@ -9,6 +9,7 @@ import { logAudit, AuditAction } from "@/lib/audit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
+  trustHost: true,
 
   // Use JWT strategy for credentials provider
   session: {

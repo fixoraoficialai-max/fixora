@@ -11,6 +11,7 @@ import type { NextAuthConfig } from "next-auth";
  */
 export const authConfigEdge: NextAuthConfig = {
   secret: process.env.AUTH_SECRET,
+  trustHost: true,
 
   session: {
     strategy: "jwt",

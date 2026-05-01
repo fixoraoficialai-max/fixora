@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 
 type VerifyState = "loading" | "success" | "already_verified" | "expired" | "error";
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Inner Component (uses useSearchParams — must be inside Suspense) ─────────
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const token        = searchParams.get("token");
@@ -27,7 +27,11 @@ export default function VerifyEmailPage() {
   async function verifyToken(t: string) {
     try {
       const res  = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(t)}`);
-      const data = await res.json() as { success: boolean; data?: { alreadyVerified?: boolean }; error?: { code: string } };
+      const data = await res.json() as {
+        success: boolean;
+        data?: { alreadyVerified?: boolean };
+        error?: { code: string };
+      };
 
       if (data.success) {
         setState(data.data?.alreadyVerified ? "already_verified" : "success");
@@ -53,6 +57,7 @@ export default function VerifyEmailPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm text-center">
+
         {state === "loading" && (
           <>
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary-light" />
@@ -85,8 +90,8 @@ export default function VerifyEmailPage() {
             </p>
             <Button
               className="mt-8 w-full"
-              isLoading={sending}
               onClick={resendVerification}
+              disabled={sending}
             >
               <Mail className="mr-2 h-4 w-4" />
               {sending ? "Sending…" : "Resend verification email"}
@@ -106,7 +111,24 @@ export default function VerifyEmailPage() {
             </Button>
           </>
         )}
+
       </div>
     </div>
+  );
+}
+
+// ─── Page (wraps inner component in Suspense — required by Next.js) ───────────
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Loader2 className="h-10 w-10 animate-spin text-primary-light" />
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

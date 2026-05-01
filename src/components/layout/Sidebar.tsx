@@ -49,12 +49,9 @@ export function Sidebar({ userCredits = 0, userName, userEmail, userImage }: Sid
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-surface">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
+      <div className="flex h-14 items-center gap-3 border-b border-border px-4">
         <Image src="/logo.png" alt="Fixora Video" width={28} height={28} className="rounded-lg" />
-        <span className="font-bold tracking-tight">
-          <span className="text-text-primary">Fixora</span>{" "}
-          <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">Video</span>
-        </span>
+        <span className="font-bold tracking-tight text-text-primary">Fixora</span>
       </div>
 
       {/* Create with AI button */}

@@ -12,7 +12,6 @@ import {
   LogOut,
   ChevronRight,
   Sparkles,
-  Image,
   Video,
   MessageSquare,
   Users,

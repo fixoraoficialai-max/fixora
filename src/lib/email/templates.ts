@@ -4,7 +4,7 @@
  * Single responsibility: produce the markup for one specific email type.
  */
 
-const APP_NAME = "Fixora";
+const APP_NAME = "Fixora Video";
 const BRAND_COLOR = "#7c3aed"; // Violet-600 — matches the app's primary color
 
 /** Wraps content in a consistent branded shell. */
@@ -63,6 +63,32 @@ export function buildVerificationEmail(verifyUrl: string): string {
     <p style="margin:28px 0 0;color:#555;font-size:13px;">
       Or copy this link into your browser:<br/>
       <span style="color:#7c5fe6;word-break:break-all;">${verifyUrl}</span>
+    </p>
+  `);
+}
+
+/**
+ * Generates the password reset HTML.
+ * @param resetUrl - The full URL including the one-time token.
+ */
+export function buildPasswordResetEmail(resetUrl: string): string {
+  return emailShell(`
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;">
+      Reset your password
+    </h1>
+    <p style="margin:0 0 32px;color:#888;font-size:15px;line-height:1.6;">
+      We received a request to reset your password for your ${APP_NAME} account. 
+      Click the button below to choose a new password. This link expires in <strong style="color:#aaa;">1 hour</strong>.
+    </p>
+    <a href="${resetUrl}"
+       style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;
+              font-weight:600;font-size:15px;padding:14px 32px;border-radius:8px;">
+      Reset Password
+    </a>
+    <p style="margin:28px 0 0;color:#555;font-size:13px;">
+      If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.<br/><br/>
+      Or copy this link into your browser:<br/>
+      <span style="color:#7c5fe6;word-break:break-all;">${resetUrl}</span>
     </p>
   `);
 }

@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Users,
   Grid,
+  Image as ImageIcon,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ const NAV_ITEMS = [
 
 const QUICK_ITEMS = [
   { label: "Prompt", href: "/create/prompt", icon: MessageSquare, credits: "1 cr" },
-  { label: "Image", href: "/create/image", icon: Image, credits: "2 cr" },
+  { label: "Image", href: "/create/image", icon: ImageIcon, credits: "2 cr" },
   { label: "Video", href: "/create/video", icon: Video, credits: "5 cr" },
   { label: "Clone", href: "/create/clone", icon: Users, credits: "10 cr" },
   { label: "Multi-Clone", href: "/create/multi-clone", icon: Grid, credits: "40 cr" },

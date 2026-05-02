@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -39,17 +40,54 @@ const QUICK_ITEMS = [
 ] as const;
 
 interface SidebarProps {
-  userCredits?: number;
-  userName?: string | null;
-  userEmail?: string | null;
-  userImage?: string | null;
+  userCredits?:  number;
+  userName?:     string | null;
+  userEmail?:    string | null;
+  userImage?:    string | null;
+  /** Controlled by DashboardShell — whether the mobile drawer is open */
+  isMobileOpen?: boolean;
+  /** Called when the mobile drawer should close (backdrop click, route change) */
+  onMobileClose?: () => void;
 }
 
-export function Sidebar({ userCredits = 0, userName, userEmail, userImage }: SidebarProps) {
+export function Sidebar({
+  userCredits = 0,
+  userName,
+  userEmail,
+  userImage,
+  isMobileOpen = false,
+  onMobileClose,
+}: SidebarProps) {
   const pathname = usePathname();
 
+  // Auto-close the mobile drawer whenever the user navigates to a new page
+  useEffect(() => {
+    onMobileClose?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-border bg-surface">
+    <>
+      {/* ── Mobile backdrop ─────────────────────────────────────────────── */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={onMobileClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── Sidebar panel ───────────────────────────────────────────────── */}
+      <aside
+        className={cn(
+          "flex h-screen w-60 shrink-0 flex-col border-r border-border bg-surface z-40",
+          // Mobile: fixed overlay with slide animation
+          "fixed inset-y-0 left-0 transition-transform duration-300 ease-in-out",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+          // Desktop: back in normal flow, always visible
+          "md:static md:translate-x-0",
+        )}
+      >
       {/* Logo */}
       <div className="flex h-14 items-center gap-3 border-b border-border px-4">
         <Image src="/logo.png" alt="Fixora Video" width={28} height={28} className="rounded-lg" />
@@ -176,7 +214,8 @@ export function Sidebar({ userCredits = 0, userName, userEmail, userImage }: Sid
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

@@ -12,6 +12,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MarketingNav } from "@/components/layout/MarketingNav";
 
 // ─────────────────────────────────────────────
 // Landing Page — Fixora
@@ -21,7 +22,7 @@ import { Button } from "@/components/ui/button";
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-text-primary">
-      <Navbar />
+      <MarketingNav />
       <main>
         <HeroSection />
         <FeaturesSection />
@@ -31,48 +32,6 @@ export default function LandingPage() {
       </main>
       <Footer />
     </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Navbar
-// ─────────────────────────────────────────────
-function Navbar() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-border glass">
-      <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Fixora Video" width={28} height={28} className="rounded-lg" />
-          <span className="font-bold tracking-tight">
-            <span className="text-text-primary">Fixora</span>{" "}
-            <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">Video</span>
-          </span>
-        </Link>
-
-        <div className="hidden items-center gap-6 md:flex">
-          <Link href="#features" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-            Features
-          </Link>
-          <Link href="#pricing" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-            Pricing
-          </Link>
-          <Link href="#how-it-works" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-            How it works
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/login">Sign in</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/register">
-              Get started <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </div>
-      </nav>
-    </header>
   );
 }
 
@@ -102,7 +61,7 @@ function HeroSection() {
         </div>
 
         {/* Headline */}
-        <h1 className="mb-6 text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl">
+        <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
           Create videos that{" "}
           <span className="text-gradient">move people</span>
         </h1>
@@ -135,8 +94,8 @@ function HeroSection() {
           Free to start · No credit card required · 10 free credits
         </p>
 
-        {/* Dashboard mockup */}
-        <div className="mx-auto mt-16 max-w-4xl">
+        {/* Dashboard mockup — hidden on very small screens */}
+        <div className="mx-auto mt-16 hidden max-w-4xl sm:block">
           <DashboardMockup />
         </div>
       </div>

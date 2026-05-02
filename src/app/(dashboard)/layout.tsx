@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { DashboardShell } from "@/components/layout/DashboardShell";
 
 export default async function DashboardLayout({
   children,
@@ -16,21 +16,18 @@ export default async function DashboardLayout({
   }
 
   const credits = await db.userCredits.findUnique({
-    where: { userId: session.user.id },
+    where:  { userId: session.user.id },
     select: { balance: true },
   });
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar
-        userCredits={credits?.balance ?? 0}
-        userName={session.user.name}
-        userEmail={session.user.email}
-        userImage={session.user.image}
-      />
-      <main className="flex flex-1 flex-col overflow-y-auto">
-        {children}
-      </main>
-    </div>
+    <DashboardShell
+      userCredits={credits?.balance ?? 0}
+      userName={session.user.name}
+      userEmail={session.user.email}
+      userImage={session.user.image}
+    >
+      {children}
+    </DashboardShell>
   );
 }

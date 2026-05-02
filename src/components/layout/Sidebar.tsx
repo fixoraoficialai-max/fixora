@@ -17,6 +17,8 @@ import {
   Users,
   Grid,
   Image as ImageIcon,
+  AlertTriangle,
+  AlertCircle,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -134,6 +136,9 @@ export function Sidebar({ userCredits = 0, userName, userEmail, userImage }: Sid
 
       {/* Credits */}
       <div className="border-t border-border p-3">
+        {/* Low credits alert banner */}
+        <LowCreditsAlert balance={userCredits} />
+
         <div className="rounded-lg border border-border bg-surface-elevated p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-text-secondary">Credits</span>
@@ -174,6 +179,41 @@ export function Sidebar({ userCredits = 0, userName, userEmail, userImage }: Sid
     </aside>
   );
 }
+
+// ─── LowCreditsAlert ─────────────────────────────────────────────────────────
+
+const WARNING_THRESHOLD  = 5;
+const CRITICAL_THRESHOLD = 0;
+
+function LowCreditsAlert({ balance }: { balance: number }) {
+  if (balance > WARNING_THRESHOLD) return null;
+
+  const isCritical = balance <= CRITICAL_THRESHOLD;
+
+  return (
+    <Link
+      href="/settings"
+      className={cn(
+        "flex items-start gap-2 rounded-lg border px-2.5 py-2 mb-2 text-xs transition-all hover:opacity-80",
+        isCritical
+          ? "border-danger/30 bg-danger/10 text-danger"
+          : "border-warning/30 bg-warning/10 text-warning"
+      )}
+      aria-label={isCritical ? "No credits remaining — upgrade plan" : "Low credits warning — upgrade plan"}
+    >
+      {isCritical
+        ? <AlertCircle   className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        : <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />}
+      <span className="leading-snug">
+        {isCritical
+          ? <><strong>Out of credits.</strong> Upgrade to keep generating.</>          
+          : <><strong>{balance} credits left.</strong> Upgrade before you run out.</>}
+      </span>
+    </Link>
+  );
+}
+
+// ─── UserAvatar ───────────────────────────────────────────────────────────────
 
 function UserAvatar({ name, image }: { name?: string | null; image?: string | null }) {
   const initials = name

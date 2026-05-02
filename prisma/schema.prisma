@@ -149,6 +149,12 @@ model UserCredits {
   lifetime  Int      @default(10) // total ever granted
   updatedAt DateTime @updatedAt
 
+  // Low-credit notification deduplication
+  // Tracks the last time a notification was sent and at what balance,
+  // so we don't spam the user with repeated emails.
+  lastNotifiedAt      DateTime? // When the last low-credits email was sent
+  lastNotifiedBalance Int?      // Balance at the time of last notification
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_credits")

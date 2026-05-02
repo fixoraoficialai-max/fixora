@@ -288,3 +288,81 @@ export function buildPasswordResetEmail(resetUrl: string, userName?: string): st
     `You're receiving this because a password reset was requested for your ${APP_NAME} account.`
   );
 }
+
+/**
+ * Email sent when a user's credit balance drops to a low threshold.
+ * @param userName      - Display name for personalization.
+ * @param balance       - Current credit balance.
+ * @param settingsUrl   - Link to the settings/upgrade page.
+ */
+export function buildLowCreditsEmail(
+  userName: string | null,
+  balance: number,
+  settingsUrl: string
+): string {
+  const greeting  = userName ? `Hi ${userName},` : "Hi there,";
+  const isCritical = balance === 0;
+
+  const accentColor  = isCritical ? "#ef4444" : "#f59e0b";
+  const accentLight  = isCritical ? "rgba(239,68,68,0.08)"  : "rgba(245,158,11,0.08)";
+  const accentBorder = isCritical ? "rgba(239,68,68,0.20)"  : "rgba(245,158,11,0.20)";
+  const emoji        = isCritical ? "🚨" : "⚡";
+  const label        = isCritical ? "Out of Credits" : "Low Credits Warning";
+  const headline     = isCritical
+    ? "You've used all your credits"
+    : "You're running low on credits";
+  const body         = isCritical
+    ? `${greeting} You have <strong style="color:${accentColor};">0 credits</strong> remaining on your ${APP_NAME} account. Video generation is paused until you add more credits.`
+    : `${greeting} You have <strong style="color:${accentColor};">${balance} credit${balance === 1 ? "" : "s"}</strong> remaining — that's enough for ${Math.floor(balance / 5)} more basic video${Math.floor(balance / 5) === 1 ? "" : "s"}. Top up to keep creating without interruption.`;
+
+  return emailShell(
+    `
+    <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:${accentColor};
+               letter-spacing:1px;text-transform:uppercase;
+               font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+      ${emoji} ${label}
+    </p>
+
+    <h1 style="margin:8px 0 0;font-size:26px;font-weight:800;color:${COLORS.textPrimary};
+               letter-spacing:-0.5px;line-height:1.2;
+               font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+      ${headline}
+    </h1>
+
+    <p style="margin:16px 0 0;font-size:15px;color:${COLORS.textMuted};line-height:1.7;
+               font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+      ${body}
+    </p>
+
+    <!-- Credit balance indicator -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+      style="background:${accentLight};border:1px solid ${accentBorder};
+             border-radius:10px;margin:24px 0 0;">
+      <tr>
+        <td style="padding:18px 20px;">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:${accentColor};
+                     letter-spacing:0.5px;text-transform:uppercase;
+                     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            Current balance
+          </p>
+          <p style="margin:0;font-size:32px;font-weight:800;color:${COLORS.textPrimary};
+                     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+                     letter-spacing:-1px;">
+            ${balance} <span style="font-size:16px;font-weight:500;color:${COLORS.textMuted};">credits</span>
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    ${primaryButton("Upgrade my plan", settingsUrl)}
+
+    <p style="margin:0;font-size:13px;color:${COLORS.textMuted};line-height:1.6;
+               font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+      Our plans start at <strong style="color:${COLORS.textPrimary};">$12/month</strong> for 80 credits.
+      You can also upgrade anytime from your account settings.
+    </p>
+    `,
+    `You're receiving this because your ${APP_NAME} credit balance is running low.`
+  );
+}
+

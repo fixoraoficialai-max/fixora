@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logAudit, AuditAction } from "@/lib/audit";
+import { checkAndNotifyLowCredits } from "@/lib/credits/notifications";
 
 // ─── Reserve ──────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,17 @@ export async function reserveCredits(userId: string, required: number): Promise<
     userId,
     metadata: { amount: required, success },
   });
+
+  // Fire-and-forget: send low-credits email if the new balance is at a threshold.
+  // We only read the balance on success to avoid an extra query on failed reservations.
+  if (success) {
+    db.userCredits
+      .findUnique({ where: { userId }, select: { balance: true } })
+      .then((record) => {
+        if (record) checkAndNotifyLowCredits(userId, record.balance);
+      })
+      .catch(() => { /* notification failure must never break generation */ });
+  }
 
   return success;
 }

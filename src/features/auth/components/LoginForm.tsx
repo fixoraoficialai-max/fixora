@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, ShieldAlert, Clock } from "lucide-react";
 import ReCAPTCHA from "react-google-recaptcha";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, FormField } from "@/components/ui/input";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
@@ -50,8 +51,9 @@ function useCountdown(retryAfterMs: number) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router        = useRouter();
+  const t             = useTranslations("auth");
+  const searchParams  = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
@@ -89,7 +91,7 @@ export function LoginForm() {
     const captchaRequired = showRecaptcha && !!siteKey;
     const recaptchaToken  = captchaRequired ? recaptchaRef.current?.getValue() ?? "" : undefined;
     if (captchaRequired && !recaptchaToken) {
-      setServerError("Please complete the reCAPTCHA verification.");
+      setServerError(t("pleaseCompleteRecaptcha"));
       return;
     }
 
@@ -112,12 +114,12 @@ export function LoginForm() {
         setIsLocked(true);
         setLockedMs(details?.retryAfterMs ?? 60_000);
         setAttempts(details?.attempts ?? attempts);
-        setServerError(checkData.error?.message ?? "Account temporarily locked.");
+        setServerError(checkData.error?.message ?? t("accountLocked"));
         return;
       }
 
       if (code === "RECAPTCHA_FAILED") {
-        setServerError("reCAPTCHA failed. Please try again.");
+        setServerError(t("recaptchaFailed"));
         return;
       }
 
@@ -128,17 +130,15 @@ export function LoginForm() {
         if (details?.locked && details.retryAfterMs) {
           setIsLocked(true);
           setLockedMs(details.retryAfterMs);
-          setServerError(`Too many attempts. Account locked for ${Math.ceil(details.retryAfterMs / 60000)} minute(s).`);
+          setServerError(t("accountLockedMin", { minutes: Math.ceil(details.retryAfterMs / 60000) }));
         } else {
           const remaining = 3 - (newAttempts % 3);
-          setServerError(
-            `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining before lockout.`
-          );
+          setServerError(t("invalidCredentials", { remaining }));
         }
         return;
       }
 
-      setServerError("An unexpected error occurred. Please try again.");
+      setServerError(t("unexpectedError"));
       return;
     }
 
@@ -150,8 +150,8 @@ export function LoginForm() {
     });
 
     if (result?.error) {
-      // This should not happen since we already verified — safety net
-      setServerError("Sign-in failed unexpectedly. Please try again.");
+      // Safety net — session should already be verified at this point
+      setServerError(t("signInFailed"));
       return;
     }
 
@@ -164,8 +164,8 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-text-primary">Welcome back</h1>
-        <p className="mt-2 text-sm text-text-muted">Sign in to your Fixora Video account</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t("welcomeBack")}</h1>
+        <p className="mt-2 text-sm text-text-muted">{t("signInSubtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
@@ -175,8 +175,8 @@ export function LoginForm() {
           <div role="alert" className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 flex items-start gap-3">
             <ShieldAlert className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-warning">Account Temporarily Locked</p>
-              <p className="text-xs text-text-muted">Too many failed attempts. Please wait before trying again.</p>
+              <p className="text-sm font-semibold text-warning">{t("accountLocked")}</p>
+              <p className="text-xs text-text-muted">{t("tooManyAttempts")}</p>
               <div className="flex items-center gap-1.5 mt-1">
                 <Clock className="h-3.5 w-3.5 text-warning" />
                 <span className="text-sm font-mono font-bold text-warning">{lockDisplay}</span>
@@ -204,10 +204,10 @@ export function LoginForm() {
           </div>
         )}
 
-        <FormField label="Email" error={errors.email?.message} required>
+        <FormField label={t("email")} error={errors.email?.message} required>
           <Input
             type="email"
-            placeholder="you@company.com"
+            placeholder={t("emailPlaceholder")}
             icon={<Mail className="h-4 w-4" />}
             autoComplete="email"
             autoFocus
@@ -217,10 +217,10 @@ export function LoginForm() {
           />
         </FormField>
 
-        <FormField label="Password" error={errors.password?.message} required>
+        <FormField label={t("password")} error={errors.password?.message} required>
           <Input
             type="password"
-            placeholder="Your password"
+            placeholder={t("passwordPlaceholder")}
             icon={<Lock className="h-4 w-4" />}
             autoComplete="current-password"
             disabled={isFormDisabled}
@@ -234,7 +234,7 @@ export function LoginForm() {
             href="/forgot-password"
             className="text-xs text-text-muted hover:text-text-secondary transition-colors"
           >
-            Forgot password?
+            {t("forgotPassword")}
           </Link>
         </div>
 
@@ -250,14 +250,14 @@ export function LoginForm() {
         )}
 
         <Button type="submit" isLoading={isSubmitting} disabled={isFormDisabled} className="w-full mt-1">
-          {isLocked ? `Locked — wait ${lockDisplay}` : isSubmitting ? "Signing in..." : "Sign in"}
+          {isLocked ? t("lockedWait", { time: lockDisplay }) : isSubmitting ? t("signingIn") : t("signIn")}
         </Button>
       </form>
 
       {/* ── Divider ── */}
       <div className="my-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-text-muted uppercase tracking-widest">or</span>
+        <span className="text-xs text-text-muted uppercase tracking-widest">{t("or")}</span>
         <div className="h-px flex-1 bg-border" />
       </div>
 
@@ -273,13 +273,13 @@ export function LoginForm() {
           <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
           <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/>
         </svg>
-        Continue with Google
+        {t("continueGoogle")}
       </button>
 
       <p className="mt-6 text-center text-sm text-text-muted">
-        Don&apos;t have an account?{" "}
+        {t("noAccount")}{" "}
         <Link href="/register" className="font-medium text-primary-light hover:text-primary transition-colors">
-          Create one for free
+          {t("createFree")}
         </Link>
       </p>
     </div>

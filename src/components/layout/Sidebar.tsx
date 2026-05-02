@@ -24,23 +24,27 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
+// translationKey maps to sidebar.nav* in messages/*.json
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Projects",  href: "/projects",  icon: FolderOpen },
-  { label: "Studio",    href: "/studio",    icon: Clapperboard },
-  { label: "History",   href: "/history",   icon: History },
-  { label: "Settings",  href: "/settings",  icon: Settings },
+  { translationKey: "navDashboard", href: "/dashboard", icon: LayoutDashboard },
+  { translationKey: "navProjects",  href: "/projects",  icon: FolderOpen },
+  { translationKey: "navStudio",    href: "/studio",    icon: Clapperboard },
+  { translationKey: "navHistory",   href: "/history",   icon: History },
+  { translationKey: "navSettings",  href: "/settings",  icon: Settings },
 ] as const;
 
+// Brand-name labels are not translated (they are product names).
+// "Imagen" is the only UI word here — kept as translationKey.
 const QUICK_ITEMS = [
-  { label: "Prompt",       href: "/create/prompt",      icon: MessageSquare, credits: "1 cr"  },
-  { label: "Image",        href: "/create/image",       icon: ImageIcon,     credits: "2 cr"  },
-  { label: "Video",        href: "/create/video",       icon: Video,         credits: "5 cr"  },
-  { label: "Avatar AI",    href: "/create/clone",       icon: Users,         credits: "10 cr" },
-  { label: "Multi-Avatar", href: "/create/multi-clone", icon: Grid,          credits: "40 cr" },
-  { label: "Ad Creator",   href: "/create/ad",          icon: Megaphone,     credits: "25 cr" },
+  { label: "Prompt",       translationKey: null, href: "/create/prompt",      icon: MessageSquare, credits: "1 cr"  },
+  { label: "Imagen",       translationKey: null, href: "/create/image",       icon: ImageIcon,     credits: "2 cr"  },
+  { label: "Video",        translationKey: null, href: "/create/video",       icon: Video,         credits: "5 cr"  },
+  { label: "Avatar AI",    translationKey: null, href: "/create/clone",       icon: Users,         credits: "10 cr" },
+  { label: "Multi-Avatar", translationKey: null, href: "/create/multi-clone", icon: Grid,          credits: "40 cr" },
+  { label: "Ad Creator",   translationKey: null, href: "/create/ad",          icon: Megaphone,     credits: "25 cr" },
 ] as const;
 
 interface SidebarProps {
@@ -63,6 +67,7 @@ export function Sidebar({
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  const t        = useTranslations("sidebar");
 
   // Auto-close the mobile drawer whenever the user navigates to a new page
   useEffect(() => {
@@ -110,14 +115,14 @@ export function Sidebar({
           )}
         >
           <Sparkles className="h-4 w-4" />
-          Create with AI
+          {t("createWithAi")}
         </Link>
       </div>
 
       {/* Quick Create */}
       <div className="px-3 pb-2">
         <p className="px-2 mb-1.5 text-2xs font-semibold text-text-muted uppercase tracking-wider">
-          Quick Create
+          {t("quickCreate")}
         </p>
         <div className="flex flex-col gap-0.5">
           {QUICK_ITEMS.map(({ label, href, icon: Icon, credits }) => {
@@ -148,7 +153,7 @@ export function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 px-3 pb-3" aria-label="Main navigation">
         <ul className="flex flex-col gap-0.5">
-          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+          {NAV_ITEMS.map(({ translationKey, href, icon: Icon }) => {
             const isActive =
               href === "/dashboard"
                 ? pathname === "/dashboard"
@@ -167,7 +172,7 @@ export function Sidebar({
                   aria-current={isActive ? "page" : undefined}
                 >
                   <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-primary" : "text-text-muted")} />
-                  {label}
+                  {t(translationKey)}
                   {isActive && <ChevronRight className="ml-auto h-3 w-3 text-primary/50" />}
                 </Link>
               </li>
@@ -183,8 +188,8 @@ export function Sidebar({
 
         <div className="rounded-lg border border-border bg-surface-elevated p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-text-secondary">Credits</span>
-            <span className="text-xs font-bold text-text-primary tabular-nums">{userCredits} left</span>
+            <span className="text-xs font-medium text-text-secondary">{t("credits")}</span>
+            <span className="text-xs font-bold text-text-primary tabular-nums">{t("creditsLeft", { n: userCredits })}</span>
           </div>
           <div className="h-1 w-full overflow-hidden rounded-full bg-surface-overlay">
             <div
@@ -193,9 +198,9 @@ export function Sidebar({
             />
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <p className="text-2xs text-text-muted">Free tier · 10 cr/month</p>
+            <p className="text-2xs text-text-muted">{t("freeTier")}</p>
             <Link href="/settings" className="text-2xs text-primary-light hover:underline">
-              Buy more
+              {t("buyMore")}
             </Link>
           </div>
         </div>
@@ -206,13 +211,13 @@ export function Sidebar({
         <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
           <UserAvatar name={userName} image={userImage} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-text-primary">{userName ?? "User"}</p>
+            <p className="truncate text-xs font-medium text-text-primary">{userName ?? t("userFallback")}</p>
             <p className="truncate text-2xs text-text-muted">{userEmail}</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="rounded-md p-1 text-text-muted hover:text-text-secondary transition-colors"
-            aria-label="Sign out"
+            aria-label={t("signOut")}
           >
             <LogOut className="h-3.5 w-3.5" />
           </button>
@@ -229,6 +234,7 @@ const WARNING_THRESHOLD  = 5;
 const CRITICAL_THRESHOLD = 0;
 
 function LowCreditsAlert({ balance }: { balance: number }) {
+  const t          = useTranslations("sidebar");
   if (balance > WARNING_THRESHOLD) return null;
 
   const isCritical = balance <= CRITICAL_THRESHOLD;
@@ -242,15 +248,15 @@ function LowCreditsAlert({ balance }: { balance: number }) {
           ? "border-danger/30 bg-danger/10 text-danger"
           : "border-warning/30 bg-warning/10 text-warning"
       )}
-      aria-label={isCritical ? "No credits remaining — upgrade plan" : "Low credits warning — upgrade plan"}
+      aria-label={t(isCritical ? "noCreditsAria" : "lowCreditsAria")}
     >
       {isCritical
         ? <AlertCircle   className="h-3.5 w-3.5 mt-0.5 shrink-0" />
         : <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />}
       <span className="leading-snug">
         {isCritical
-          ? <><strong>Out of credits.</strong> Upgrade to keep generating.</>          
-          : <><strong>{balance} credits left.</strong> Upgrade before you run out.</>}
+          ? t("outOfCredits")
+          : t("lowCredits", { n: balance })}
       </span>
     </Link>
   );

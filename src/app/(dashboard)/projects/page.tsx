@@ -4,6 +4,7 @@ import { Plus, FolderOpen, Film } from "lucide-react";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TopBar } from "@/components/layout/TopBar";
@@ -17,34 +18,30 @@ export default async function ProjectsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const projects = await db.project.findMany({
-    where: { userId: session.user.id },
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      status: true,
-      aspectRatio: true,
-      platform: true,
-      createdAt: true,
-      updatedAt: true,
-      _count: {
-        select: { scenes: true, videos: true },
+  const [projects, t] = await Promise.all([
+    db.project.findMany({
+      where:   { userId: session.user.id },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true, name: true, description: true,
+        status: true, aspectRatio: true, platform: true,
+        createdAt: true, updatedAt: true,
+        _count: { select: { scenes: true, videos: true } },
       },
-    },
-  });
+    }),
+    getTranslations("projects"),
+  ]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <TopBar
-        title="Projects"
-        description={`${projects.length} project${projects.length !== 1 ? "s" : ""}`}
+        title={t("title")}
+        description={t("scenes", { n: projects.length })}
         actions={
           <Button size="sm" asChild>
             <Link href="/projects/new">
               <Plus className="h-4 w-4" />
-              New Project
+              {t("newProject")}
             </Link>
           </Button>
         }
@@ -54,12 +51,9 @@ export default async function ProjectsPage() {
         {projects.length === 0 ? (
           <EmptyState
             icon={FolderOpen}
-            title="No projects yet"
-            description="Create your first video project to get started. Each project can have multiple scenes and generate multiple videos."
-            action={{
-              label: "Create project",
-              onClick: () => {},
-            }}
+            title={t("noProjectsTitle")}
+            description={t("noProjectsDesc")}
+            action={{ label: t("createProject"), onClick: () => {} }}
             className="mt-8"
           />
         ) : (
@@ -90,11 +84,11 @@ export default async function ProjectsPage() {
                       <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1">
                           <FolderOpen className="h-3 w-3" />
-                          {project._count.scenes} scenes
+                          {t("scenes", { n: project._count.scenes })}
                         </span>
                         <span className="flex items-center gap-1">
                           <Film className="h-3 w-3" />
-                          {project._count.videos} videos
+                          {t("videos", { n: project._count.videos })}
                         </span>
                       </div>
                       <span>{formatRelativeTime(project.updatedAt)}</span>

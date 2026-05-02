@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Plus, FolderOpen, Film, Zap, TrendingUp, ArrowRight } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TopBar } from "@/components/layout/TopBar";
@@ -23,11 +24,14 @@ export default async function DashboardPage() {
     getRecentProjects(userId),
   ]);
 
+  const t = await getTranslations("dashboard");
+  const firstName = session.user.name?.split(" ")[0] ?? "";
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <TopBar
         title="Dashboard"
-        description={`Welcome back, ${session.user.name?.split(" ")[0] ?? "there"}`}
+        description={t("welcomeBack", { name: firstName })}
       />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -35,25 +39,25 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon={FolderOpen}
-            label="Total Projects"
+            label={t("totalProjects")}
             value={stats.totalProjects}
             color="primary"
           />
           <StatCard
             icon={Film}
-            label="Videos Generated"
+            label={t("videosGenerated")}
             value={stats.totalVideos}
             color="accent"
           />
           <StatCard
             icon={TrendingUp}
-            label="This Month"
+            label={t("thisMonth")}
             value={stats.thisMonthVideos}
             color="success"
           />
           <StatCard
             icon={Zap}
-            label="Credits Left"
+            label={t("creditsLeft")}
             value={stats.creditsLeft}
             color="warning"
           />
@@ -62,10 +66,10 @@ export default async function DashboardPage() {
         {/* Recent Projects */}
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Recent Projects</h2>
+            <h2 className="text-sm font-semibold text-text-primary">{t("recentProjects")}</h2>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/projects">
-                View all <ArrowRight className="h-3.5 w-3.5" />
+                {t("viewAll")} <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>

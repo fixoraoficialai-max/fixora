@@ -8,13 +8,15 @@ import { Input, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { User, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 interface ProfileEditFormProps {
   initialName: string;
 }
 
 export function ProfileEditForm({ initialName }: ProfileEditFormProps) {
-  const router = useRouter();
+  const router        = useRouter();
+  const t             = useTranslations("settings");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -51,14 +53,14 @@ export function ProfileEditForm({ initialName }: ProfileEditFormProps) {
         return;
       }
 
-      setSuccessMessage("Profile updated successfully!");
+      setSuccessMessage(t("profileUpdated"));
       router.refresh(); // Refresh to get the new name from the server in the UI
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       console.error(err);
-      setServerError("Network error. Please try again later.");
+      setServerError(t("networkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +68,7 @@ export function ProfileEditForm({ initialName }: ProfileEditFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4 mt-4 p-4 border border-border rounded-lg bg-surface/50">
-      <h3 className="text-sm font-medium text-text-primary mb-2">Edit Profile Details</h3>
+      <h3 className="text-sm font-medium text-text-primary mb-2">{t("editProfile")}</h3>
       
       {serverError && (
         <div role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
@@ -81,10 +83,10 @@ export function ProfileEditForm({ initialName }: ProfileEditFormProps) {
         </div>
       )}
 
-      <FormField label="Full Name" error={errors.name?.message} required>
+      <FormField label={t("fullName")} error={errors.name?.message} required>
         <Input
           type="text"
-          placeholder="Your name"
+          placeholder={t("yourName")}
           icon={<User className="h-4 w-4" />}
           disabled={isSubmitting}
           {...register("name")}
@@ -94,7 +96,7 @@ export function ProfileEditForm({ initialName }: ProfileEditFormProps) {
 
       <div className="flex justify-end mt-2">
         <Button type="submit" variant="primary" disabled={!isDirty || isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save changes"}
+          {isSubmitting ? t("saving") : t("saveChanges")}
         </Button>
       </div>
     </form>

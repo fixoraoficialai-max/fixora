@@ -10,6 +10,7 @@ import { ProfileEditForm } from "@/features/settings/components/ProfileEditForm"
 import { ChangePasswordForm } from "@/features/settings/components/ChangePasswordForm";
 import { UpgradePlanButton } from "@/features/settings/components/UpgradePlanButton";
 import { FeedbackForm } from "@/features/settings/components/FeedbackForm";
+import { LanguageSelector } from "@/components/shared/LanguageSelector";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -77,6 +78,7 @@ export default async function SettingsPage() {
             </div>
 
             <ProfileEditForm initialName={user.name ?? ""} />
+            <LanguageSelector />
           </CardContent>
         </Card>
 

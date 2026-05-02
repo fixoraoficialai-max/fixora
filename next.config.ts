@@ -17,8 +17,11 @@ const csp = [
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   // Fal.ai storage, upload, and queue endpoints — required for AI generation
-  "connect-src 'self' https://*.fal.media https://queue.fal.run https://fal.run wss://fal.run https://storage.googleapis.com",
+  "connect-src 'self' https://*.fal.media https://queue.fal.run https://fal.run wss://fal.run https://storage.googleapis.com https://www.google.com",
   "media-src 'self' blob: https://*.fal.media https://storage.googleapis.com",
+  // reCAPTCHA v2 requires Google's script and iframe
+  "script-src-elem 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com",
+  "frame-src https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

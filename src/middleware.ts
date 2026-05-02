@@ -76,13 +76,49 @@ function rateLimitedResponse(tier: Tier): NextResponse {
   );
 }
 
+// ─── Admin cookie verification (Web Crypto — Edge compatible) ────────────────
+
+async function verifyAdminCookie(
+  token: string,
+  userId: string,
+  secret: string
+): Promise<boolean> {
+  try {
+    const parts = token.split(":");
+    if (parts.length !== 3) return false;
+
+    const [tokenUserId, expiresStr, sigHex] = parts as [string, string, string];
+    if (tokenUserId !== userId) return false;
+
+    const expires = parseInt(expiresStr, 10);
+    if (isNaN(expires) || Math.floor(Date.now() / 1000) > expires) return false;
+
+    const payload  = `${tokenUserId}:${expiresStr}`;
+    const key      = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret).buffer as ArrayBuffer,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    const sigBytes = new Uint8Array(
+      (sigHex.match(/.{2}/g) ?? []).map((b) => parseInt(b, 16))
+    ).buffer as ArrayBuffer;
+    return await crypto.subtle.verify(
+      "HMAC", key, sigBytes, new TextEncoder().encode(payload).buffer as ArrayBuffer
+    );
+  } catch {
+    return false;
+  }
+}
+
 // ─── Auth instance (Edge-compatible — no Prisma, no bcrypt) ──────────────────
 
 const { auth } = NextAuth(authConfigEdge);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { nextUrl, auth: session } = req;
   const path = nextUrl.pathname;
   const ip   = extractIp(req);
@@ -103,12 +139,23 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Admin guard — role is in the JWT token
+  // Admin guard — layer 1: role in JWT token
   const isAdminRoute = ADMIN_PREFIXES.some((prefix) => path.startsWith(prefix));
   if (isAdminRoute && isLoggedIn) {
     const role = (session as { user?: { role?: string } })?.user?.role;
     if (role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", nextUrl.origin));
+    }
+
+    // Layer 2: Admin PIN cookie — skip only for the verify page itself
+    if (path !== "/admin/verify") {
+      const userId      = (session as { user?: { id?: string } })?.user?.id ?? "";
+      const cookieValue = req.cookies.get("admin_verified")?.value ?? "";
+      const secret      = (process.env.NEXTAUTH_SECRET ?? "") + (process.env.ADMIN_PIN ?? "");
+      const valid       = await verifyAdminCookie(cookieValue, userId, secret);
+      if (!valid) {
+        return NextResponse.redirect(new URL("/admin/verify", nextUrl.origin));
+      }
     }
   }
 

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { TopBar } from "@/components/layout/TopBar";
 import { HistoryClient } from "@/components/shared/HistoryClient";
 
 export const metadata: Metadata = { title: "Historial" };
@@ -33,13 +32,5 @@ export default async function HistoryPage() {
     }),
   ]);
 
-  return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <TopBar
-        title="Historial"
-        description={`${videos.length} videos · ${images.length} imágenes`}
-      />
-      <HistoryClient videos={videos} images={images} />
-    </div>
-  );
+  return <HistoryClient videos={videos} images={images} />;
 }

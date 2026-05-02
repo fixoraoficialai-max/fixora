@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Film, Download, Trash2, Loader2, AlertCircle } from "lucide-react";
+import { Film, Download, Trash2, Loader2, AlertCircle, Video as VideoIcon, ImageIcon, LayoutGrid } from "lucide-react";
+import { TopBar } from "@/components/layout/TopBar";
 import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,8 @@ interface Props {
   images: GeneratedImage[];
 }
 
+type Filter = "all" | "videos" | "images";
+
 // ─── URL helpers (pure, no side-effects) ─────────────────────────────────────
 
 function downloadUrl(url: string, type: "video" | "image"): string {
@@ -47,6 +51,50 @@ function getRequestId(metadata: unknown): string | null {
     return (metadata as { requestId: string }).requestId ?? null;
   }
   return null;
+}
+
+// ─── Filter description ───────────────────────────────────────────────────────
+
+function buildDescription(filter: Filter, videoCount: number, imageCount: number): string {
+  if (filter === "videos") return `${videoCount} videos`;
+  if (filter === "images") return `${imageCount} imágenes`;
+  return `${videoCount} videos · ${imageCount} imágenes`;
+}
+
+// ─── Filter actions (rendered in TopBar next to bell) ─────────────────────────
+
+function FilterButtons({
+  filter,
+  onChange,
+}: {
+  filter: Filter;
+  onChange: (f: Filter) => void;
+}) {
+  const options: { value: Filter; icon: React.ReactNode; label: string }[] = [
+    { value: "all",    icon: <LayoutGrid className="h-3.5 w-3.5" />, label: "Todo" },
+    { value: "videos", icon: <VideoIcon  className="h-3.5 w-3.5" />, label: "Videos" },
+    { value: "images", icon: <ImageIcon  className="h-3.5 w-3.5" />, label: "Imágenes" },
+  ];
+
+  return (
+    <div className="flex gap-1">
+      {options.map(({ value, icon, label }) => (
+        <button
+          key={value}
+          onClick={() => onChange(value)}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+            filter === value
+              ? "border-primary/40 bg-primary/15 text-primary-light"
+              : "border-border text-text-muted hover:border-border-strong hover:text-text-secondary"
+          )}
+        >
+          {icon}
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // ─── API calls ───────────────────────────────────────────────────────────────
@@ -80,9 +128,10 @@ async function deleteRecord(type: "video" | "image", id: string): Promise<void> 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function HistoryClient({ videos: initialVideos, images: initialImages }: Props) {
-  const [videos, setVideos] = useState(initialVideos);
-  const [images, setImages] = useState(initialImages);
+  const [videos, setVideos]   = useState(initialVideos);
+  const [images, setImages]   = useState(initialImages);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [filter, setFilter]   = useState<Filter>("all");
 
   /** Updates a single video's fields in state without mutating the array. */
   const updateVideo = useCallback((id: string, patch: Partial<Video>) => {
@@ -130,63 +179,81 @@ export function HistoryClient({ videos: initialVideos, images: initialImages }: 
     }
   }
 
+  const showVideos = filter === "all" || filter === "videos";
+  const showImages = filter === "all" || filter === "images";
+
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex flex-col h-full overflow-hidden">
+      <TopBar
+        title="Historial"
+        description={buildDescription(filter, videos.length, images.length)}
+        actions={<FilterButtons filter={filter} onChange={setFilter} />}
+      />
 
-      {/* ── Videos ── */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Film className="h-5 w-5 text-primary-light" />
-          <h2 className="text-base font-semibold text-text-primary">Videos generados</h2>
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-light">
-            {videos.length}
-          </span>
-        </div>
+      <div className="flex-1 overflow-y-auto p-6">
 
-        {videos.length === 0 ? (
-          <p className="text-sm text-text-muted">No hay videos aún.</p>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {videos.map((video) => (
-              <VideoCard
-                key={video.id}
-                video={video}
-                deletingId={deletingId}
-                onDelete={(id) => handleDelete("video", id)}
-              />
-            ))}
+        {/* ── Videos ── */}
+        {showVideos && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Film className="h-5 w-5 text-primary-light" />
+              <h2 className="text-base font-semibold text-text-primary">Videos generados</h2>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-light">
+                {videos.length}
+              </span>
+            </div>
+
+            {videos.length === 0 ? (
+              <p className="text-sm text-text-muted">No hay videos aún.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {videos.map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    deletingId={deletingId}
+                    onDelete={(id) => handleDelete("video", id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      <div className="border-t border-border mb-8" />
+        {/* ── Divider: only when showing both ── */}
+        {showVideos && showImages && (
+          <div className="border-t border-border mb-8" />
+        )}
 
-      {/* ── Images ── */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Download className="h-5 w-5 text-primary-light" />
-          <h2 className="text-base font-semibold text-text-primary">Imágenes generadas</h2>
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-light">
-            {images.length}
-          </span>
-        </div>
+        {/* ── Images ── */}
+        {showImages && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Download className="h-5 w-5 text-primary-light" />
+              <h2 className="text-base font-semibold text-text-primary">Imágenes generadas</h2>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-light">
+                {images.length}
+              </span>
+            </div>
 
-        {images.length === 0 ? (
-          <p className="text-sm text-text-muted">No hay imágenes aún.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {images.map((image) => (
-              <ImageCard
-                key={image.id}
-                image={image}
-                deletingId={deletingId}
-                onDelete={(id) => handleDelete("image", id)}
-              />
-            ))}
+            {images.length === 0 ? (
+              <p className="text-sm text-text-muted">No hay imágenes aún.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {images.map((image) => (
+                  <ImageCard
+                    key={image.id}
+                    image={image}
+                    deletingId={deletingId}
+                    onDelete={(id) => handleDelete("image", id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
-      </div>
 
+      </div>
     </div>
   );
 }

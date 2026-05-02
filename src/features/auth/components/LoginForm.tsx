@@ -85,9 +85,10 @@ export function LoginForm() {
   const onSubmit = useCallback(async (data: LoginInput) => {
     setServerError(null);
 
-    // If reCAPTCHA is visible, it must be completed before submitting
-    const recaptchaToken = showRecaptcha ? recaptchaRef.current?.getValue() ?? "" : undefined;
-    if (showRecaptcha && !recaptchaToken) {
+    // If reCAPTCHA is visible AND configured, it must be completed before submitting
+    const captchaRequired = showRecaptcha && !!siteKey;
+    const recaptchaToken  = captchaRequired ? recaptchaRef.current?.getValue() ?? "" : undefined;
+    if (captchaRequired && !recaptchaToken) {
       setServerError("Please complete the reCAPTCHA verification.");
       return;
     }

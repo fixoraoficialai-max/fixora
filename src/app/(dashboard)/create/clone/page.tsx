@@ -4,12 +4,13 @@ import { useState, useRef, useCallback } from "react";
 import { Users, Upload, X, Zap, Download, RefreshCw, Film, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
-import { 
-  UploadCard, 
-  ImagePreview, 
-  VideoPreview, 
-  EMPTY_UPLOAD, 
-  type UploadState 
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  UploadCard,
+  ImagePreview,
+  VideoPreview,
+  EMPTY_UPLOAD,
+  type UploadState
 } from "@/components/shared/media-upload";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -259,12 +260,12 @@ export default function ClonePage() {
 
   return (
     <div className="mx-auto max-w-2xl py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Clonar Movimiento</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Aplica el movimiento de un video real a tu personaje IA
-        </p>
-      </div>
+      <PageHeader
+        title="Clonar Movimiento"
+        description="Aplica el movimiento de un video real a tu personaje IA"
+        backHref="/create"
+        backLabel="Create"
+      />
 
       {error && (
         <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

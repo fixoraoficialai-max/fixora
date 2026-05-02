@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sparkles, Copy, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 const STYLES = ["Pixar 3D", "Anime", "Cinematic", "Documentary", "Dark & Moody", "Bright & Clean", "Futuristic", "Retro"];
@@ -57,12 +58,12 @@ export default function QuickPromptPage() {
 
   return (
     <div className="mx-auto max-w-2xl py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Optimizar Prompt</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Describe tu idea en cualquier idioma — Claude la transforma en un prompt profesional
-        </p>
-      </div>
+      <PageHeader
+        title="Optimizar Prompt"
+        description="Describe tu idea en cualquier idioma — Claude la transforma en un prompt profesional"
+        backHref="/create"
+        backLabel="Create"
+      />
 
       <div className="flex flex-col gap-5">
         <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">

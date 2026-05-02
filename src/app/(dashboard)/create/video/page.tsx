@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Video, Download, RefreshCw, Zap, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 type AspectRatio = "LANDSCAPE" | "PORTRAIT" | "SQUARE";
@@ -142,10 +143,12 @@ export default function QuickVideoPage() {
 
   return (
     <div className="mx-auto max-w-2xl py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Generar Video</h1>
-        <p className="mt-1 text-sm text-text-muted">Genera un video desde texto o a partir de una imagen</p>
-      </div>
+      <PageHeader
+        title="Generar Video"
+        description="Genera un video desde texto o a partir de una imagen"
+        backHref="/create"
+        backLabel="Create"
+      />
       <div className="flex flex-col gap-5">
         <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
 

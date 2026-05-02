@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sparkles, ArrowRight, RefreshCw, Download, Zap, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField, Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 type Step = "setup" | "scenes" | "generating" | "result";
@@ -105,10 +106,12 @@ export default function CreatePage() {
 
   return (
     <div className="mx-auto max-w-2xl pb-12 overflow-y-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Crear Video IA</h1>
-        <p className="mt-1 text-sm text-text-muted">Crea videos estilo Pixar con personajes consistentes</p>
-      </div>
+      <PageHeader
+        title="Crear Video IA"
+        description="Crea videos estilo Pixar con personajes consistentes"
+        backHref="/dashboard"
+        backLabel="Dashboard"
+      />
       {error && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
 
       {step === "setup" && (

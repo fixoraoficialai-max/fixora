@@ -4,12 +4,13 @@ import { useState, useRef, useCallback } from "react";
 import { Users, Upload, X, Zap, Download, RefreshCw, Film, CheckCircle, Grid, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
-import { 
-  UploadCard, 
-  ImagePreview, 
-  VideoPreview, 
-  EMPTY_UPLOAD, 
-  type UploadState 
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  UploadCard,
+  ImagePreview,
+  VideoPreview,
+  EMPTY_UPLOAD,
+  type UploadState
 } from "@/components/shared/media-upload";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -197,16 +198,15 @@ export default function MultiClonePage() {
   return (
     <div className="max-w-5xl mx-auto py-8 px-4">
       <div className="flex flex-col gap-8">
-        
+
         {/* ── Header ── */}
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Grid className="h-6 w-6" />
-            </div>
-            <h1 className="text-2xl font-bold text-text-primary">Multi-Clone Pro</h1>
-          </div>
-          <p className="text-text-muted">Intercambia 4 personajes siguiendo el mismo movimiento (5s cada uno)</p>
+          <PageHeader
+            backHref="/create"
+            backLabel="Create"
+            title="Multi-Clone Pro"
+            description="Intercambia 4 personajes siguiendo el mismo movimiento (5s cada uno)"
+          />
         </div>
 
         {error && (

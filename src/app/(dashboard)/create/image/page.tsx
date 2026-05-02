@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Download, Zap, Plus, Trash2, Sparkles, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 type AspectRatio = "LANDSCAPE" | "PORTRAIT" | "SQUARE";
@@ -193,10 +194,12 @@ export default function QuickImagePage() {
 
   return (
     <div className="mx-auto max-w-2xl py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Generar Imágenes</h1>
-        <p className="mt-1 text-sm text-text-muted">Responde las preguntas y Claude + FLUX crean la imagen perfecta</p>
-      </div>
+      <PageHeader
+        title="Generar Imágenes"
+        description="Responde las preguntas y Claude + FLUX crean la imagen perfecta"
+        backHref="/create"
+        backLabel="Create"
+      />
 
       {error && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
 

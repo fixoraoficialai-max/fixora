@@ -27,8 +27,12 @@ export const metadata: Metadata = {
   authors:  [{ name: "Fixora Video", url: "https://fixoravideo.com" }],
   creator:  "Fixora Video",
   icons: {
-    icon:  "/logo.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/favicon.ico",                   sizes: "any"     },
+      { url: "/logo.png", type: "image/png",   sizes: "512x512" },
+    ],
+    apple:   { url: "/logo.png", sizes: "180x180", type: "image/png" },
+    shortcut: "/favicon.ico",
   },
   openGraph: {
     type:        "website",

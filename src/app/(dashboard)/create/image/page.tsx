@@ -143,7 +143,7 @@ export default function QuickImagePage() {
     for (let i = 0; i < quantity; i++) {
       setCurrentGen(i + 1);
       try {
-        // Optimize with Claude
+        // Optimize prompt with AI
         const promptRes = await fetch("/api/generate/prompt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -196,7 +196,7 @@ export default function QuickImagePage() {
     <div className="flex flex-col h-full overflow-hidden">
       <TopBar
         title="Generar Imágenes"
-        description="Responde las preguntas y Claude + FLUX crean la imagen perfecta"
+        description="Responde las preguntas y Fixora crea la imagen perfecta"
       />
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="mx-auto max-w-2xl">

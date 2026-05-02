@@ -60,7 +60,7 @@ export default function QuickPromptPage() {
     <div className="flex flex-col h-full overflow-hidden">
       <TopBar
         title="Optimizar Prompt"
-        description="Describe tu idea — Claude la transforma en un prompt profesional"
+        description="Describe tu idea — Fixora lo transforma en un prompt profesional"
       />
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="mx-auto max-w-2xl flex flex-col gap-5">

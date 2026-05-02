@@ -28,14 +28,6 @@ export default async function DashboardPage() {
       <TopBar
         title="Dashboard"
         description={`Welcome back, ${session.user.name?.split(" ")[0] ?? "there"}`}
-        actions={
-          <Button size="sm" asChild>
-            <Link href="/projects/new">
-              <Plus className="h-4 w-4" />
-              New Video
-            </Link>
-          </Button>
-        }
       />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">

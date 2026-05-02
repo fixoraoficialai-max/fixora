@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { User, Shield, Zap } from "lucide-react";
+import { User, Shield, Zap, MessageSquare } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { PLANS_LIST } from "@/lib/stripe";
@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { ProfileEditForm } from "@/features/settings/components/ProfileEditForm";
 import { ChangePasswordForm } from "@/features/settings/components/ChangePasswordForm";
 import { UpgradePlanButton } from "@/features/settings/components/UpgradePlanButton";
+import { FeedbackForm } from "@/features/settings/components/FeedbackForm";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -43,6 +44,21 @@ export default async function SettingsPage() {
       <TopBar title="Settings" description="Manage your account and preferences" />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-2xl">
+
+        {/* Contacto & Feedback — encima de Profile */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-text-muted" />
+              <CardTitle>Contáctanos</CardTitle>
+            </div>
+            <CardDescription>Tu opinión nos ayuda a mejorar — te respondemos al email de tu cuenta</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FeedbackForm />
+          </CardContent>
+        </Card>
+
         {/* Profile */}
         <Card>
           <CardHeader>

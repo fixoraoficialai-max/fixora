@@ -142,11 +142,12 @@ export function checkRateLimit(key: string, opts: RateLimitOptions): boolean {
 // ─── Rate limit presets (single source of truth) ─────────────────────────────
 
 export const RATE_LIMITS = {
-  upload:     { limit: 20, windowMs: 60_000 },   // 20 uploads/min
-  generate:   { limit: 5,  windowMs: 60_000 },   // 5 generations/min
-  clone:      { limit: 3,  windowMs: 60_000 },   // 3 clones/min
-  multiClone: { limit: 1,  windowMs: 120_000 },  // 1 multi-clone/2min (4 Fal.ai jobs at once)
-  auth:       { limit: 10, windowMs: 60_000 },   // 10 login attempts/min — brute-force guard
+  upload:     { limit: 20, windowMs: 60_000 },        // 20 uploads/min
+  generate:   { limit: 5,  windowMs: 60_000 },        // 5 generations/min
+  clone:      { limit: 3,  windowMs: 60_000 },        // 3 clones/min
+  multiClone: { limit: 1,  windowMs: 120_000 },       // 1 multi-clone/2min
+  auth:       { limit: 10, windowMs: 60_000 },        // 10 login attempts/min
+  contact:    { limit: 2,  windowMs: 30 * 60_000 },   // 2 messages/30min — anti-spam
 } as const;
 
 // ─── IP Rate Limiter (Edge-compatible) ───────────────────────────────────────

@@ -10,31 +10,48 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://fixoravideo.com"),
   title: {
-    default: "Fixora Video — AI Video Generation",
+    default: "Fixora Video — Generador de Videos con IA",
     template: "%s | Fixora Video",
   },
   description:
-    "Create stunning AI-powered videos for social media from prompts, scenes, and visual styles. Professional, fast, and scalable.",
-  keywords: ["AI video", "video generation", "social media", "content creation", "AI tools"],
-  authors: [{ name: "Fixora Video" }],
-  creator: "Fixora Video",
+    "Crea videos e imágenes con inteligencia artificial en segundos. Genera videos para redes sociales, anima avatares y crea contenido profesional con IA. Prueba gratis.",
+  keywords: [
+    "Fixora", "Fixora Video", "fixoravideo",
+    "generador de videos con IA", "crear videos con inteligencia artificial",
+    "videos para redes sociales IA", "generar imágenes con IA",
+    "avatar IA", "animar personajes IA", "contenido con IA",
+    "AI video generator", "AI image generation", "video generation AI",
+  ],
+  authors:  [{ name: "Fixora Video", url: "https://fixoravideo.com" }],
+  creator:  "Fixora Video",
+  icons: {
+    icon:  "/logo.png",
+    apple: "/logo.png",
+  },
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: process.env.NEXT_PUBLIC_APP_URL,
-    title: "Fixora Video — AI Video Generation",
-    description: "Create stunning AI-powered videos for social media.",
-    siteName: "Fixora Video",
+    type:        "website",
+    locale:      "es_ES",
+    url:         "https://fixoravideo.com",
+    title:       "Fixora Video — Generador de Videos con IA",
+    description: "Crea videos e imágenes con IA en segundos. Prueba gratis.",
+    siteName:    "Fixora Video",
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Fixora Video" }],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Fixora Video — AI Video Generation",
-    description: "Create stunning AI-powered videos for social media.",
+    card:        "summary_large_image",
+    title:       "Fixora Video — Generador de Videos con IA",
+    description: "Crea videos e imágenes con IA en segundos. Prueba gratis.",
+    images:      ["/logo.png"],
   },
   robots: {
-    index: true,
+    index:  true,
     follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  alternates: {
+    canonical: "https://fixoravideo.com",
   },
 };
 
@@ -49,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="es" className={inter.variable} suppressHydrationWarning>
       <body className="bg-background text-text-primary antialiased">
         {children}
         <Analytics />

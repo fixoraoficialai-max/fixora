@@ -4,7 +4,8 @@ import { authConfigEdge } from "@/lib/auth/config.edge";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PROTECTED_PREFIXES = ["/dashboard", "/projects", "/history", "/settings", "/create"];
+const PROTECTED_PREFIXES = ["/dashboard", "/projects", "/history", "/settings", "/create", "/admin"];
+const ADMIN_PREFIXES     = ["/admin"];
 const AUTH_ROUTES        = ["/login", "/register"];
 
 // ─── Lightweight in-memory rate limiter ───────────────────────────────────────
@@ -100,6 +101,15 @@ export default auth((req) => {
     const loginUrl = new URL("/login", nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", path);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Admin guard — role is in the JWT token
+  const isAdminRoute = ADMIN_PREFIXES.some((prefix) => path.startsWith(prefix));
+  if (isAdminRoute && isLoggedIn) {
+    const role = (session as { user?: { role?: string } })?.user?.role;
+    if (role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", nextUrl.origin));
+    }
   }
 
   if (isAuthRoute && isLoggedIn) {

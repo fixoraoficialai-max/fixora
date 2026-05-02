@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Sparkles, ArrowRight, RefreshCw, Download, Zap, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField, Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
+import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 
 type Step = "setup" | "scenes" | "generating" | "result";
@@ -105,14 +105,14 @@ export default function CreatePage() {
   const creditCost = validSceneCount * 3;
 
   return (
-    <div className="mx-auto max-w-2xl pb-12 overflow-y-auto">
-      <PageHeader
+    <div className="flex flex-col h-full overflow-hidden">
+      <TopBar
         title="Crear Video IA"
         description="Crea videos estilo Pixar con personajes consistentes"
-        backHref="/dashboard"
-        backLabel="Dashboard"
       />
-      {error && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
+      <div className="flex-1 overflow-y-auto py-6 px-4">
+        <div className="mx-auto max-w-2xl pb-8">
+          {error && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
 
       {step === "setup" && (
         <div className="flex flex-col gap-5">
@@ -243,6 +243,8 @@ export default function CreatePage() {
           </Button>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

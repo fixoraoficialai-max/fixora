@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Users, Upload, X, Zap, Download, RefreshCw, Film, CheckCircle, Grid, Play } from "lucide-react";
+import { Users, Zap, Download, RefreshCw, Film, CheckCircle, Grid, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
+import { TopBar } from "@/components/layout/TopBar";
 import {
   UploadCard,
   ImagePreview,
@@ -196,18 +196,14 @@ export default function MultiClonePage() {
   const canGenerate = characters.every(c => c.url) && motion.url && prompt.trim() && phase === "idle";
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <div className="flex flex-col gap-8">
-
-        {/* ── Header ── */}
-        <div className="flex flex-col gap-2">
-          <PageHeader
-            backHref="/create"
-            backLabel="Create"
-            title="Multi-Avatar"
-            description="Intercambia 4 personajes siguiendo el mismo movimiento (5s cada uno)"
-          />
-        </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      <TopBar
+        title="Multi-Avatar"
+        description="Intercambia 4 personajes siguiendo el mismo movimiento (5s cada uno)"
+      />
+      <div className="flex-1 overflow-y-auto py-6 px-4">
+        <div className="max-w-5xl mx-auto pb-8">
+          <div className="flex flex-col gap-8">
 
         {error && (
           <div className="p-4 rounded-xl border border-error/20 bg-error/5 text-error text-sm font-medium animate-in fade-in slide-in-from-top-2">
@@ -346,6 +342,8 @@ export default function MultiClonePage() {
           </div>
         )}
 
+          </div>
+        </div>
       </div>
     </div>
   );

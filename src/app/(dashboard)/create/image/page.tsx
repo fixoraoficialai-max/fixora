@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Zap, Plus, Trash2, Sparkles, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
+import { Download, Zap, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
+import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 
 type AspectRatio = "LANDSCAPE" | "PORTRAIT" | "SQUARE";
@@ -193,17 +193,16 @@ export default function QuickImagePage() {
   const creditCost = quantity * 3;
 
   return (
-    <div className="mx-auto max-w-2xl py-8 px-4">
-      <PageHeader
+    <div className="flex flex-col h-full overflow-hidden">
+      <TopBar
         title="Generar Imágenes"
         description="Responde las preguntas y Claude + FLUX crean la imagen perfecta"
-        backHref="/create"
-        backLabel="Create"
       />
+      <div className="flex-1 overflow-y-auto py-6 px-4">
+        <div className="mx-auto max-w-2xl">
+          {error && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
 
-      {error && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
-
-      <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5">
 
         {/* STEP 1: Type */}
         <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
@@ -418,6 +417,8 @@ export default function QuickImagePage() {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

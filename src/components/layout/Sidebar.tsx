@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Users,
   Grid,
+  Megaphone,
   Image as ImageIcon,
   AlertTriangle,
   AlertCircle,
@@ -32,11 +33,12 @@ const NAV_ITEMS = [
 ] as const;
 
 const QUICK_ITEMS = [
-  { label: "Prompt", href: "/create/prompt", icon: MessageSquare, credits: "1 cr" },
-  { label: "Image", href: "/create/image", icon: ImageIcon, credits: "2 cr" },
-  { label: "Video", href: "/create/video", icon: Video, credits: "5 cr" },
-  { label: "Avatar AI",     href: "/create/clone",       icon: Users, credits: "10 cr" },
-  { label: "Multi-Avatar",  href: "/create/multi-clone", icon: Grid,  credits: "40 cr" },
+  { label: "Prompt",       href: "/create/prompt",      icon: MessageSquare, credits: "1 cr"  },
+  { label: "Image",        href: "/create/image",       icon: ImageIcon,     credits: "2 cr"  },
+  { label: "Video",        href: "/create/video",       icon: Video,         credits: "5 cr"  },
+  { label: "Avatar AI",    href: "/create/clone",       icon: Users,         credits: "10 cr" },
+  { label: "Multi-Avatar", href: "/create/multi-clone", icon: Grid,          credits: "40 cr" },
+  { label: "Ad Creator",   href: "/create/ad",          icon: Megaphone,     credits: "25 cr" },
 ] as const;
 
 interface SidebarProps {

@@ -18,7 +18,7 @@ export const ADMIN_PIN_CONFIG = {
   recaptchaThreshold: 2,      // Show reCAPTCHA after N failures
   lockDurationMs:     60_000, // 1 minute lockout (iPhone-style)
   minLength:          15,
-  maxLength:          20,
+  maxLength:          30,
 } as const;
 
 export function getAttempts(userId: string): AttemptRecord {

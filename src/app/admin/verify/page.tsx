@@ -187,16 +187,14 @@ export default function AdminVerifyPage() {
             {/* PIN input */}
             <div className={`transition-transform duration-100 ${shake ? "animate-[shake_0.4s_ease-in-out]" : ""}`}>
               <label htmlFor="pin-input" className="block text-xs font-medium text-text-muted mb-2">
-                PIN ({ADMIN_PIN_CONFIG.minLength}–{ADMIN_PIN_CONFIG.maxLength} dígitos)
+                PIN ({ADMIN_PIN_CONFIG.minLength}–{ADMIN_PIN_CONFIG.maxLength} caracteres)
               </label>
               <input
                 id="pin-input"
                 type="password"
-                inputMode="numeric"
-                pattern="\d*"
                 maxLength={ADMIN_PIN_CONFIG.maxLength}
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => setPin(e.target.value)}
                 disabled={submitting}
                 autoFocus
                 autoComplete="off"

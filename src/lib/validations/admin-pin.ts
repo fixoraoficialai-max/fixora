@@ -4,9 +4,8 @@ import { ADMIN_PIN_CONFIG } from "@/lib/security/admin-pin";
 export const adminPinSchema = z.object({
   pin: z
     .string({ required_error: "PIN requerido" })
-    .regex(/^\d+$/, "El PIN solo puede contener dígitos")
-    .min(ADMIN_PIN_CONFIG.minLength, `El PIN debe tener entre ${ADMIN_PIN_CONFIG.minLength} y ${ADMIN_PIN_CONFIG.maxLength} dígitos`)
-    .max(ADMIN_PIN_CONFIG.maxLength, `El PIN debe tener entre ${ADMIN_PIN_CONFIG.minLength} y ${ADMIN_PIN_CONFIG.maxLength} dígitos`),
+    .min(ADMIN_PIN_CONFIG.minLength, `El PIN debe tener al menos ${ADMIN_PIN_CONFIG.minLength} caracteres`)
+    .max(ADMIN_PIN_CONFIG.maxLength, `El PIN no puede superar los ${ADMIN_PIN_CONFIG.maxLength} caracteres`),
   recaptchaToken: z.string().optional(),
 });
 

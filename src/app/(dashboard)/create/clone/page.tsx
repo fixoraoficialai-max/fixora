@@ -187,7 +187,7 @@ export default function ClonePage() {
         }
 
         if (result.status === "FAILED") {
-          setError(result.reason ?? "Fal.ai no pudo generar el video. No se descontaron créditos.");
+          setError(result.reason ?? "No se pudo generar el video. No se descontaron créditos.");
           setPhase("error");
           return;
         }
@@ -212,7 +212,7 @@ export default function ClonePage() {
     setPhase("submitted");
     setError("");
     setVideoUrl("");
-    setStatusMsg("Enviando a Fal.ai…");
+    setStatusMsg("Procesando tu solicitud…");
 
     try {
       const { jobId, requestId } = await submitCloneJob(
@@ -356,7 +356,7 @@ export default function ClonePage() {
             <Zap className="h-8 w-8 text-primary-light animate-pulse" />
             <p className="text-sm font-medium text-text-primary">{statusMsg}</p>
             <p className="text-xs text-text-muted text-center">
-              Kling Motion Control suele tardar 3–6 minutos.<br />
+              La generación suele tardar 3–6 minutos.<br />
               Si cierras esta página, el video aparecerá en tu Historial cuando esté listo.
             </p>
             <p className="text-xs text-success">

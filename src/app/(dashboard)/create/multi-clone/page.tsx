@@ -142,7 +142,7 @@ export default function MultiClonePage() {
         }
 
         if (data.overallStatus === "FAILED") {
-          setError("Kling no pudo procesar alguno de los personajes. No se cobraron créditos.");
+          setError("No se pudo procesar alguno de los personajes. No se cobraron créditos.");
           setPhase("error");
           return;
         }

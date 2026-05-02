@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
           return apiSuccess({
             status: "FAILED",
             videoUrl: null,
-            reason: "El video de referencia fue rechazado por Kling. Usa un video sin marcas de agua (watermarks).",
+            reason: "El video de referencia no pudo procesarse. Usa un video sin marcas de agua (watermarks).",
           });
         }
         throw err; // unexpected error

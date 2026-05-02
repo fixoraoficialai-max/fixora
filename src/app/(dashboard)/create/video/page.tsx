@@ -193,7 +193,7 @@ export default function QuickVideoPage() {
             )}
           </FormField>
 
-          <FormField label="Extender video existente (opcional)" hint="Pega la URL de un video generado para continuar la escena con Grok">
+          <FormField label="Extender video existente (opcional)" hint="Pega la URL de un video generado para continuar la escena">
             <div className="flex items-center gap-2">
               <input
                 type="url"

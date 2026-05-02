@@ -4,7 +4,7 @@ import { authConfigEdge } from "@/lib/auth/config.edge";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PROTECTED_PREFIXES = ["/dashboard", "/projects", "/history", "/settings", "/create", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/projects", "/history", "/settings", "/create", "/admin", "/studio"];
 const ADMIN_PREFIXES     = ["/admin"];
 const AUTH_ROUTES        = ["/login", "/register"];
 

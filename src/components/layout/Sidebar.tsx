@@ -18,6 +18,7 @@ import {
   Users,
   Grid,
   Megaphone,
+  Clapperboard,
   Image as ImageIcon,
   AlertTriangle,
   AlertCircle,
@@ -27,9 +28,10 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Projects", href: "/projects", icon: FolderOpen },
-  { label: "History", href: "/history", icon: History },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Projects",  href: "/projects",  icon: FolderOpen },
+  { label: "Studio",    href: "/studio",    icon: Clapperboard },
+  { label: "History",   href: "/history",   icon: History },
+  { label: "Settings",  href: "/settings",  icon: Settings },
 ] as const;
 
 const QUICK_ITEMS = [

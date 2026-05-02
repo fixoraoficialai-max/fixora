@@ -147,6 +147,7 @@ export const RATE_LIMITS = {
   clone:      { limit: 3,  windowMs: 60_000 },        // 3 clones/min
   multiClone: { limit: 1,  windowMs: 120_000 },       // 1 multi-clone/2min
   ad:         { limit: 2,  windowMs: 120_000 },       // 2 ad videos/2min
+  studio:     { limit: 3,  windowMs: 60_000 },        // 3 scene generations/min
   auth:       { limit: 10, windowMs: 60_000 },        // 10 login attempts/min
   contact:    { limit: 2,  windowMs: 30 * 60_000 },   // 2 messages/30min — anti-spam
 } as const;

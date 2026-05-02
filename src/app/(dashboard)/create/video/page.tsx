@@ -188,7 +188,7 @@ export default function QuickVideoPage() {
                 <input type="url" placeholder="https://..."
                   value={imageUrl}
                   onChange={(e) => { setImageUrl(e.target.value); setImagePreview(e.target.value); }}
-                  className="flex h-10 w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/60 transition-colors" />
+                  className="flex h-10 w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-base text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/60 transition-colors" />
               </div>
             )}
           </FormField>
@@ -200,7 +200,7 @@ export default function QuickVideoPage() {
                 placeholder="https://... URL del video a extender"
                 value={extendVideoUrl}
                 onChange={(e) => setExtendVideoUrl(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/60 transition-colors"
+                className="flex h-10 w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-base text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/60 transition-colors"
               />
               {extendVideoUrl && (
                 <button type="button" onClick={() => setExtendVideoUrl("")}

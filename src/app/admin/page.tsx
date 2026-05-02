@@ -157,7 +157,7 @@ export default function AdminPage() {
             placeholder="Search by name or email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface-elevated pl-9 pr-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-border bg-surface-elevated pl-9 pr-3 py-2 text-base text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
         <Button variant="secondary" size="sm" onClick={fetchUsers} disabled={loading}>
@@ -247,7 +247,7 @@ export default function AdminPage() {
                 max={10000}
                 value={adjustAmount}
                 onChange={(e) => setAdjustAmount(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-base text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -258,7 +258,7 @@ export default function AdminPage() {
                 placeholder="e.g. manual top-up, refund…"
                 value={adjustReason}
                 onChange={(e) => setAdjustReason(e.target.value)}
-                className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-base text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 

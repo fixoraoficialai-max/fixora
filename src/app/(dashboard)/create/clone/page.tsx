@@ -332,11 +332,6 @@ export default function ClonePage() {
             />
           </FormField>
 
-          <div className="rounded-xl border border-success/20 bg-success/5 p-3">
-            <p className="text-xs text-success font-medium">
-              Los 10 créditos solo se cobran cuando el video esté listo — si Fal.ai falla no se cobra nada.
-            </p>
-          </div>
 
           <div className="flex items-center justify-between pt-1 border-t border-border">
             <p className="text-xs text-text-muted">

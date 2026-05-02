@@ -55,7 +55,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     features: [
       "80 credits / month",
       "~16 basic videos (5s)",
-      "~8 Clone videos",
+      "~8 Avatar AI",
       "All AI models",
       "Project organization",
     ],
@@ -71,7 +71,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     features: [
       "250 credits / month",
       "~50 basic videos (5s)",
-      "~25 Clone videos",
+      "~25 Avatar AI",
       "All AI models",
       "Project organization",
       "Priority support",
@@ -88,11 +88,11 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     features: [
       "800 credits / month",
       "~160 basic videos (5s)",
-      "~80 Clone videos",
+      "~80 Avatar AI",
       "All AI models",
       "Project organization",
       "Priority support",
-      "Multi-Clone (4 characters)",
+      "Multi-Avatar (4 characters)",
     ],
   },
 } as const;

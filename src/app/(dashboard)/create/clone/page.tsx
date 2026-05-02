@@ -261,8 +261,8 @@ export default function ClonePage() {
   return (
     <div className="mx-auto max-w-2xl py-8 px-4">
       <PageHeader
-        title="Clonar Movimiento"
-        description="Aplica el movimiento de un video real a tu personaje IA"
+        title="Avatar AI"
+        description="Anima tu personaje IA con el movimiento de un video real"
         backHref="/create"
         backLabel="Create"
       />
@@ -300,7 +300,7 @@ export default function ClonePage() {
           {/* Motion video */}
           <UploadCard
             label="Video Movimiento"
-            hint="Video con el movimiento a clonar"
+            hint="Video con el movimiento a aplicar al Avatar"
             icon={<Zap className="h-4 w-4 text-warning" />}
             dropLabel={<>Sube video<br />de movimiento<br /><span className="text-[10px] opacity-60">MP4, MOV, WebM</span></>}
             state={motion}
@@ -350,7 +350,7 @@ export default function ClonePage() {
               </Button>
               <Button onClick={handleGenerate} disabled={!canGenerate} isLoading={isProcessing}>
                 <Users className="h-4 w-4" />
-                {isProcessing ? statusMsg || "Procesando…" : "Clonar Movimiento"}
+                {isProcessing ? statusMsg || "Procesando…" : "Generar Avatar AI"}
               </Button>
             </div>
           </div>
@@ -383,7 +383,7 @@ export default function ClonePage() {
               className="w-full"
             />
             <div className="flex items-center justify-between px-4 py-3 bg-surface-elevated border-t border-border">
-              <p className="text-xs text-success font-medium">Movimiento clonado exitosamente</p>
+              <p className="text-xs text-success font-medium">Avatar AI generado exitosamente</p>
               <div className="flex gap-2">
                 <a href={`/api/download?url=${encodeURIComponent(videoUrl)}&type=video`} download>
                   <Button variant="secondary" size="sm">

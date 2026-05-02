@@ -334,7 +334,7 @@ const PRICING_TIERS = [
     locked: [
       "Image generation",
       "Video generation",
-      "Clone & Multi-Clone",
+      "Avatar AI & Multi-Avatar",
     ],
   },
   {
@@ -375,13 +375,13 @@ const PRICING_TIERS = [
       "Prompt to video (1 cr)",
       "Image generation (2 cr)",
       "Video generation (5 cr)",
-      "Clone videos (10 cr)",
+      "Avatar AI (10 cr)",
       "Unlimited projects",
       "All AI models",
       "Priority support",
     ],
     locked: [
-      "Multi-Clone (4 characters)",
+      "Multi-Avatar (4 characters)",
     ],
   },
   {
@@ -399,8 +399,8 @@ const PRICING_TIERS = [
       "Prompt to video (1 cr)",
       "Image generation (2 cr)",
       "Video generation (5 cr)",
-      "Clone videos (10 cr)",
-      "Multi-Clone — 4 chars (40 cr)",
+      "Avatar AI (10 cr)",
+      "Multi-Avatar — 4 chars (40 cr)",
       "Unlimited projects",
       "All AI models",
       "Dedicated support",
@@ -439,8 +439,8 @@ function PricingSection() {
               ["Prompt",     "1 cr"],
               ["Image",      "2 cr"],
               ["Video (5s)", "5 cr"],
-              ["Clone",      "10 cr"],
-              ["Multi-Clone","40 cr"],
+              ["Avatar AI",    "10 cr"],
+              ["Multi-Avatar", "40 cr"],
             ] as const).map(([label, cost]) => (
               <div key={label} className="flex items-center justify-between rounded-lg bg-surface-elevated px-3 py-2">
                 <span className="text-xs text-text-secondary">{label}</span>

@@ -204,7 +204,7 @@ export default function MultiClonePage() {
           <PageHeader
             backHref="/create"
             backLabel="Create"
-            title="Multi-Clone Pro"
+            title="Multi-Avatar"
             description="Intercambia 4 personajes siguiendo el mismo movimiento (5s cada uno)"
           />
         </div>
@@ -290,7 +290,7 @@ export default function MultiClonePage() {
                   </Button>
                   <Button onClick={handleGenerate} disabled={!canGenerate} isLoading={phase !== "idle" && phase !== "done"}>
                     <Play className="h-4 w-4" />
-                    Generar Multi-Clone
+                    Generar Multi-Avatar
                   </Button>
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function MultiClonePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <CheckCircle className="text-success h-6 w-6" />
-                ¡Multi-Clone Listo!
+                ¡Multi-Avatar Listo!
               </h2>
               <Button onClick={reset} variant="secondary" size="sm">Nuevo Proyecto</Button>
             </div>

@@ -98,18 +98,11 @@ export default function AdminVerifyPage() {
         body: JSON.stringify({ pin, recaptchaToken: recaptchaToken ?? undefined }),
       });
 
-      let data;
-      try {
-        data = await res.json() as {
-          success: boolean; locked?: boolean; remainingMs?: number; attempts?: number;
-          attemptsLeft?: number; requireRecaptcha?: boolean;
-          error?: string | { code: string; message: string; details?: unknown };
-        };
-      } catch (parseError) {
-        // Vercel crashed and returned HTML instead of JSON. Catch the HTML text!
-        const textError = await res.text().catch(() => "");
-        throw new Error(`CRASH VERCEL (Status ${res.status}): ${textError.substring(0, 100)}...`);
-      }
+      const data = await res.json() as {
+        success: boolean; locked?: boolean; remainingMs?: number; attempts?: number;
+        attemptsLeft?: number; requireRecaptcha?: boolean;
+        error?: string | { code: string; message: string; details?: unknown };
+      };
 
       if (data.success) {
         router.replace("/admin");
@@ -144,8 +137,8 @@ export default function AdminVerifyPage() {
       }
       setError(errorMessage);
 
-    } catch (err) {
-      setError(`Error de red/servidor: ${(err as Error).message}`);
+    } catch {
+      setError("Error de conexión. Inténtalo de nuevo.");
     } finally {
       setSubmitting(false);
     }

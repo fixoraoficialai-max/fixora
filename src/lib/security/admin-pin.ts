@@ -11,14 +11,16 @@ import { Redis } from "@upstash/redis";
 
 // ─── Redis client (lazy singleton) ────────────────────────────────────────────
 
-function buildRedis(): Redis | null {
+let _redis: Redis | null | undefined = undefined; // undefined = not yet initialized
+
+/** Returns the Redis client, initializing it on first call. Never throws. */
+function getRedis(): Redis | null {
+  if (_redis !== undefined) return _redis;
   const url   = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-  return new Redis({ url, token });
+  _redis = (url && token) ? new Redis({ url, token }) : null;
+  return _redis;
 }
-
-const redis = buildRedis();
 
 const KEY_PREFIX          = "admin:lockout:";
 const NON_LOCKED_TTL_SECS = 24 * 60 * 60; // auto-clean non-locked records after 24h
@@ -63,6 +65,7 @@ const fallbackStore = new Map<string, AttemptRecord>();
 
 /** Returns the current attempt record for a user. */
 export async function getAttempts(userId: string): Promise<AttemptRecord> {
+  const redis = getRedis();
   if (redis) {
     try {
       const record = await redis.get<AttemptRecord>(redisKey(userId));
@@ -83,6 +86,7 @@ export async function recordFailure(userId: string): Promise<AttemptRecord> {
     : null;
   const next: AttemptRecord = { count, lockedUntil };
 
+  const redis = getRedis();
   if (redis) {
     try {
       // TTL: lockout duration + 60s buffer, or 24h for non-locked records
@@ -101,6 +105,7 @@ export async function recordFailure(userId: string): Promise<AttemptRecord> {
 
 /** Clears all attempt records after a successful PIN entry. */
 export async function clearAttempts(userId: string): Promise<void> {
+  const redis = getRedis();
   if (redis) {
     try {
       await redis.del(redisKey(userId));

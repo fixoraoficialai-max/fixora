@@ -40,6 +40,7 @@ export function ImagePreview({ state }: { state: UploadState }) {
  * it falls back to a clean "file ready" UI instead of a black box.
  */
 export function VideoPreview({ state }: { state: UploadState }) {
+  const t = useTranslations("upload");
   const [canPlay, setCanPlay] = useState<boolean | null>(null); // null = loading
 
   return (
@@ -60,12 +61,10 @@ export function VideoPreview({ state }: { state: UploadState }) {
       {canPlay === false && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
           <Film className="h-8 w-8 text-primary-light" />
-          <p className="text-xs text-text-primary font-medium">Video listo</p>
+          <p className="text-xs text-text-primary font-medium">{t("videoReady")}</p>
           <p className="text-[10px] text-text-muted">{state.fileName}</p>
           <p className="text-[10px] text-text-muted">
-            {state.uploading
-              ? "Subiendo…"
-              : "Formato MOV/HEVC no se previsualiza en Chrome,\npero el servidor lo procesa perfectamente."}
+            {state.uploading ? t("uploading") : t("movHevcNote")}
           </p>
         </div>
       )}
@@ -107,6 +106,7 @@ export function UploadCard({
   onFile: (file: File) => void;
   onClear: () => void;
 }) {
+  const t = useTranslations("upload");
   return (
     <div className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3 h-full">
       <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export function UploadCard({
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">
                 <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                <p className="text-white text-xs">Subiendo…</p>
+                <p className="text-white text-xs">{t("uploading")}</p>
               </div>
             </div>
           )}
@@ -137,7 +137,7 @@ export function UploadCard({
           {state.url && (
             <div className="absolute bottom-2 left-2 rounded-full bg-success/80 px-2 py-0.5 text-xs text-white flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
-              Listo
+              {t("ready")}
             </div>
           )}
         </div>

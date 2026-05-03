@@ -5,8 +5,12 @@ import { useProjectStore, type DraftScene } from "@/stores/useProjectStore";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField, Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+
+type T = ReturnType<typeof useTranslations<"video">>;
 
 export function StepSceneBuilder() {
+  const t = useTranslations("video");
   const { scenes, addScene, updateScene, removeScene, nextStep, prevStep } =
     useProjectStore();
 
@@ -18,10 +22,8 @@ export function StepSceneBuilder() {
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">Scene Builder</h2>
-          <p className="mt-1 text-sm text-text-muted">
-            Divide your video into scenes. Each scene has its own prompt, style, and duration.
-          </p>
+          <h2 className="text-lg font-semibold text-text-primary">{t("sceneBuilderTitle")}</h2>
+          <p className="mt-1 text-sm text-text-muted">{t("sceneBuilderSubtitle")}</p>
         </div>
         <Button
           type="button"
@@ -31,7 +33,7 @@ export function StepSceneBuilder() {
           disabled={scenes.length >= 10}
         >
           <Plus className="h-4 w-4" />
-          Add Scene
+          {t("sceneAdd")}
         </Button>
       </div>
 
@@ -44,6 +46,7 @@ export function StepSceneBuilder() {
             isOnly={scenes.length === 1}
             onUpdate={(updates) => updateScene(scene.id, updates)}
             onRemove={() => removeScene(scene.id)}
+            t={t}
           />
         ))}
       </div>
@@ -55,22 +58,22 @@ export function StepSceneBuilder() {
           className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-4 text-sm text-text-muted hover:border-primary/30 hover:text-text-secondary hover:bg-surface-elevated transition-all"
         >
           <Plus className="h-4 w-4" />
-          Add another scene
+          {t("sceneAddAnother")}
         </button>
       )}
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <Button type="button" variant="secondary" onClick={prevStep}>
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t("back")}
         </Button>
         <Button
           type="button"
           onClick={nextStep}
           disabled={!canProceed}
-          title={!canProceed ? "Each scene needs at least 10 characters in the prompt" : undefined}
+          title={!canProceed ? t("sceneMinCharsTooltip") : undefined}
         >
-          Continue to style
+          {t("sceneContinue")}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
@@ -87,6 +90,7 @@ interface SceneCardProps {
   isOnly: boolean;
   onUpdate: (updates: Partial<DraftScene>) => void;
   onRemove: () => void;
+  t: T;
 }
 
 const VISUAL_STYLES = [
@@ -94,7 +98,7 @@ const VISUAL_STYLES = [
   "Bold & Graphic", "Dark & Moody", "Bright & Clean", "Futuristic",
 ];
 
-function SceneCard({ scene, index, isOnly, onUpdate, onRemove }: SceneCardProps) {
+function SceneCard({ scene, index, isOnly, onUpdate, onRemove, t }: SceneCardProps) {
   const hasError = scene.prompt.trim().length > 0 && scene.prompt.trim().length < 10;
 
   return (
@@ -106,14 +110,14 @@ function SceneCard({ scene, index, isOnly, onUpdate, onRemove }: SceneCardProps)
           {index + 1}
         </span>
         <span className="text-sm font-medium text-text-primary flex-1">
-          Scene {index + 1}
+          {t("sceneLabel", { n: index + 1 })}
         </span>
         {!isOnly && (
           <button
             type="button"
             onClick={onRemove}
             className="rounded-md p-1 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-            aria-label={`Remove scene ${index + 1}`}
+            aria-label={t("sceneRemoveAria", { n: index + 1 })}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -123,23 +127,23 @@ function SceneCard({ scene, index, isOnly, onUpdate, onRemove }: SceneCardProps)
       {/* Scene body */}
       <div className="flex flex-col gap-4 p-4">
         <FormField
-          label="Scene prompt"
-          error={hasError ? "Prompt must be at least 10 characters" : undefined}
-          hint="Describe what happens in this scene visually."
+          label={t("scenePromptLabel")}
+          error={hasError ? t("scenePromptMinError") : undefined}
+          hint={t("scenePromptHint")}
           required
         >
           <Textarea
-            placeholder="Describe the visual content of this scene in detail. What do we see? What happens?"
+            placeholder={t("scenePromptPlaceholder")}
             rows={3}
             value={scene.prompt}
             onChange={(e) => onUpdate({ prompt: e.target.value })}
-            error={hasError ? "Too short" : undefined}
+            error={hasError ? t("scenePromptMinError") : undefined}
           />
         </FormField>
 
         <div className="grid grid-cols-2 gap-4">
           {/* Visual style */}
-          <FormField label="Visual style">
+          <FormField label={t("sceneStyleLabel")}>
             <div className="flex flex-wrap gap-1.5">
               {VISUAL_STYLES.map((style) => (
                 <button
@@ -162,7 +166,7 @@ function SceneCard({ scene, index, isOnly, onUpdate, onRemove }: SceneCardProps)
           </FormField>
 
           {/* Duration */}
-          <FormField label="Duration (seconds)">
+          <FormField label={t("sceneDurationLabel")}>
             <Input
               type="number"
               min={1}
@@ -175,9 +179,9 @@ function SceneCard({ scene, index, isOnly, onUpdate, onRemove }: SceneCardProps)
         </div>
 
         {/* Optional narration */}
-        <FormField label="Narration / voiceover" hint="Optional — text to be spoken in this scene">
+        <FormField label={t("sceneNarrationLabel")} hint={t("sceneNarrationHint")}>
           <Textarea
-            placeholder="Optional: add narration or voiceover text for this scene..."
+            placeholder={t("sceneNarrationPlaceholder")}
             rows={2}
             value={scene.narration ?? ""}
             onChange={(e) => onUpdate({ narration: e.target.value || null })}

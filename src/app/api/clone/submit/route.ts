@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { configureFal, fal } from "@/lib/fal";
 import { ApiErrors, apiSuccess } from "@/lib/api/response";
-import { checkCredits } from "@/lib/credits";
+import { reserveCredits, releaseCredits } from "@/lib/credits";
 import { cloneSubmitSchema } from "@/lib/validations/clone";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // ── Rate limit: 3 clones/min per user ────────────────────────────────────
-  if (!checkRateLimit(`clone:${session.user.id}`, RATE_LIMITS.clone)) {
+  if (!(await checkRateLimit(`clone:${session.user.id}`, RATE_LIMITS.clone))) {
     return ApiErrors.tooManyRequests();
   }
 
@@ -46,8 +46,9 @@ export async function POST(req: NextRequest) {
   const { characterImageUrl, motionVideoUrl, prompt } = parsed.data;
   const userId = session.user.id;
 
-  const hasCredits = await checkCredits(userId, CLONE_CREDITS);
-  if (!hasCredits) return ApiErrors.insufficientCredits();
+  // Atomic credit reservation — prevents race conditions on simultaneous requests
+  const reserved = await reserveCredits(userId, CLONE_CREDITS);
+  if (!reserved) return ApiErrors.insufficientCredits();
 
   try {
     configureFal();
@@ -68,12 +69,15 @@ export async function POST(req: NextRequest) {
         userId,
         status: "PENDING",
         creditsUsed: CLONE_CREDITS,
+        falRequestId: request_id,
         metadata: { requestId: request_id, type: "clone" },
       },
     });
 
     return apiSuccess({ jobId: video.id, requestId: request_id });
   } catch {
+    // Fal.ai or DB failed AFTER credits were reserved — return them immediately
+    await releaseCredits(userId, CLONE_CREDITS).catch(() => null);
     return ApiErrors.internal();
   }
 }

@@ -11,6 +11,7 @@ import ReCAPTCHA from "react-google-recaptcha";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, FormField } from "@/components/ui/input";
+import { FormAlert } from "@/components/ui/form-alert";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -187,9 +188,7 @@ export function LoginForm() {
 
         {/* ── Error Banner ── */}
         {serverError && !isLocked && (
-          <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {serverError}
-          </div>
+          <FormAlert variant="error" size="md">{serverError}</FormAlert>
         )}
 
         {/* ── Attempt Counter ── */}

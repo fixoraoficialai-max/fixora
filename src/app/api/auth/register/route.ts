@@ -56,7 +56,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
-  if (!checkRateLimit(`register:${ip}`, REGISTER_RATE_LIMIT)) {
+  if (!(await checkRateLimit(`register:${ip}`, REGISTER_RATE_LIMIT))) {
     return ApiErrors.tooManyRequests();
   }
 

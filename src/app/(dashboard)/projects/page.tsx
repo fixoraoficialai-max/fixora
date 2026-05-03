@@ -22,6 +22,7 @@ export default async function ProjectsPage() {
     db.project.findMany({
       where:   { userId: session.user.id },
       orderBy: { updatedAt: "desc" },
+      take:    20,
       select: {
         id: true, name: true, description: true,
         status: true, aspectRatio: true, platform: true,

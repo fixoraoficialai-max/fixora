@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ASPECT_RATIO_OPTIONS, type AspectRatio } from "@/types";
 import { formatDuration, cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+import { FormAlert } from "@/components/ui/form-alert";
 
 export function StepReview() {
+  const t = useTranslations("video");
   const router = useRouter();
   const { projectData, scenes, prevStep, reset } = useProjectStore();
 
@@ -90,7 +93,7 @@ export function StepReview() {
       reset();
       router.push(`/projects/${projectId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? err.message : t("reviewGenericError"));
     } finally {
       setIsGenerating(false);
     }
@@ -99,37 +102,35 @@ export function StepReview() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">Review & Generate</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Confirm your project settings before starting generation.
-        </p>
+        <h2 className="text-lg font-semibold text-text-primary">{t("reviewTitle")}</h2>
+        <p className="mt-1 text-sm text-text-muted">{t("reviewSubtitle")}</p>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryItem
           icon={Film}
-          label="Project"
-          value={projectData.name ?? "Untitled"}
+          label={t("reviewProject")}
+          value={projectData.name ?? t("untitled")}
           sub={aspectRatioOption?.label ?? "Landscape"}
         />
         <SummaryItem
           icon={Layers}
-          label="Scenes"
-          value={`${scenes.length} scene${scenes.length !== 1 ? "s" : ""}`}
-          sub={projectData.tone ?? "No tone set"}
+          label={t("reviewScenes")}
+          value={t("scenes", { n: scenes.length })}
+          sub={projectData.tone ?? t("noToneSet")}
         />
         <SummaryItem
           icon={Clock}
-          label="Total duration"
+          label={t("reviewDuration")}
           value={formatDuration(totalDuration)}
-          sub={`~${scenes.length} segment${scenes.length !== 1 ? "s" : ""}`}
+          sub={t("segments", { n: scenes.length })}
         />
       </div>
 
       {/* Scene list */}
       <div>
-        <p className="mb-3 text-sm font-medium text-text-secondary">Scenes overview</p>
+        <p className="mb-3 text-sm font-medium text-text-secondary">{t("reviewScenesOverview")}</p>
         <div className="flex flex-col gap-2">
           {scenes.map((scene, index) => (
             <div
@@ -158,35 +159,29 @@ export function StepReview() {
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-warning" />
           <p className="text-sm font-medium text-text-primary">
-            This generation will cost{" "}
-            <span className="text-warning font-bold">1 credit</span>
+            {t("reviewCreditCost", { credits: 1 })}
           </p>
         </div>
-        <p className="mt-1 text-xs text-text-muted">
-          Credits are consumed when generation starts, regardless of outcome.
-        </p>
+        <p className="mt-1 text-xs text-text-muted">{t("creditsNote")}</p>
       </div>
 
       {/* Error */}
       {error && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
-        >
+        <FormAlert variant="error" size="md" className="flex items-start gap-2 p-3">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           {error}
-        </div>
+        </FormAlert>
       )}
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <Button type="button" variant="secondary" onClick={prevStep} disabled={isGenerating}>
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t("back")}
         </Button>
         <Button type="button" onClick={handleGenerate} isLoading={isGenerating}>
           <Zap className="h-4 w-4" />
-          {isGenerating ? "Creating project..." : "Generate video"}
+          {isGenerating ? t("creatingProject") : t("generateVideo")}
         </Button>
       </div>
     </div>

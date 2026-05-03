@@ -1,29 +1,50 @@
 /**
  * Admin PIN security module.
  * Single responsibility: track failed attempts and sign/verify session tokens.
- * In-memory — resets on cold start (intentional: extra security layer).
+ *
+ * Attempt tracking is Redis-backed (Upstash) so lockouts persist across all
+ * Vercel instances and cold starts. Falls back to an in-memory Map when Redis
+ * is unavailable (e.g. local dev without env vars).
  */
 
-// ─── Attempt Tracking ─────────────────────────────────────────────────────────
+import { Redis } from "@upstash/redis";
 
-interface AttemptRecord {
-  count: number;
-  lockedUntil: number | null;
+// ─── Redis client (lazy singleton) ────────────────────────────────────────────
+
+function buildRedis(): Redis | null {
+  const url   = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
 }
 
-const store = new Map<string, AttemptRecord>();
+const redis = buildRedis();
+
+const KEY_PREFIX          = "admin:lockout:";
+const NON_LOCKED_TTL_SECS = 24 * 60 * 60; // auto-clean non-locked records after 24h
+
+function redisKey(userId: string): string {
+  return `${KEY_PREFIX}${userId}`;
+}
+
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 export const ADMIN_PIN_CONFIG = {
   maxAttempts:        5,
   recaptchaThreshold: 2,      // Show reCAPTCHA after N failures
-  lockDurationMs:     60_000, // 1 minute lockout (iPhone-style)
+  lockDurationMs:     60_000, // 1-minute lockout
   minLength:          15,
   maxLength:          30,
 } as const;
 
-export function getAttempts(userId: string): AttemptRecord {
-  return store.get(userId) ?? { count: 0, lockedUntil: null };
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface AttemptRecord {
+  count:       number;
+  lockedUntil: number | null;
 }
+
+// ─── Pure helpers (sync — no I/O) ─────────────────────────────────────────────
 
 export function isLockedOut(record: AttemptRecord): boolean {
   return !!record.lockedUntil && Date.now() < record.lockedUntil;
@@ -34,19 +55,61 @@ export function remainingLockMs(record: AttemptRecord): number {
   return Math.max(0, record.lockedUntil - Date.now());
 }
 
-export function recordFailure(userId: string): AttemptRecord {
-  const prev  = getAttempts(userId);
+// ─── In-memory fallback (single-instance only) ────────────────────────────────
+
+const fallbackStore = new Map<string, AttemptRecord>();
+
+// ─── Redis-backed attempt tracking ────────────────────────────────────────────
+
+/** Returns the current attempt record for a user. */
+export async function getAttempts(userId: string): Promise<AttemptRecord> {
+  if (redis) {
+    try {
+      const record = await redis.get<AttemptRecord>(redisKey(userId));
+      return record ?? { count: 0, lockedUntil: null };
+    } catch {
+      // Redis unavailable — fall through to in-memory
+    }
+  }
+  return fallbackStore.get(userId) ?? { count: 0, lockedUntil: null };
+}
+
+/** Records a failed PIN attempt and returns the updated record. */
+export async function recordFailure(userId: string): Promise<AttemptRecord> {
+  const prev  = await getAttempts(userId);
   const count = prev.count + 1;
   const lockedUntil = count >= ADMIN_PIN_CONFIG.maxAttempts
     ? Date.now() + ADMIN_PIN_CONFIG.lockDurationMs
     : null;
-  const next = { count, lockedUntil };
-  store.set(userId, next);
+  const next: AttemptRecord = { count, lockedUntil };
+
+  if (redis) {
+    try {
+      // TTL: lockout duration + 60s buffer, or 24h for non-locked records
+      const ttlSecs = lockedUntil
+        ? Math.ceil(ADMIN_PIN_CONFIG.lockDurationMs / 1000) + 60
+        : NON_LOCKED_TTL_SECS;
+      await redis.set(redisKey(userId), next, { ex: ttlSecs });
+      return next;
+    } catch {
+      // Redis unavailable — fall through to in-memory
+    }
+  }
+  fallbackStore.set(userId, next);
   return next;
 }
 
-export function clearAttempts(userId: string): void {
-  store.delete(userId);
+/** Clears all attempt records after a successful PIN entry. */
+export async function clearAttempts(userId: string): Promise<void> {
+  if (redis) {
+    try {
+      await redis.del(redisKey(userId));
+      return;
+    } catch {
+      // Redis unavailable — fall through to in-memory
+    }
+  }
+  fallbackStore.delete(userId);
 }
 
 // ─── Token Signing (Web Crypto — works in Node + Edge) ────────────────────────
@@ -76,10 +139,7 @@ async function hmacKey(secret: string, usage: "sign" | "verify"): Promise<Crypto
   );
 }
 
-/**
- * Creates a signed admin session token valid for 4 hours.
- * Secret = NEXTAUTH_SECRET + ADMIN_PIN (both must be known to forge).
- */
+/** Creates a signed admin session token valid for 4 hours. */
 export async function createAdminToken(userId: string, secret: string): Promise<string> {
   const expires = Math.floor(Date.now() / 1000) + 4 * 60 * 60;
   const payload = `${userId}:${expires}`;
@@ -88,10 +148,7 @@ export async function createAdminToken(userId: string, secret: string): Promise<
   return `${payload}:${toHex(sig)}`;
 }
 
-/**
- * Verifies a signed admin session token.
- * Returns false for any invalid, expired, or forged token — never throws.
- */
+/** Verifies a signed admin session token. Returns false for any invalid/expired/forged token. */
 export async function verifyAdminToken(
   token: string,
   userId: string,

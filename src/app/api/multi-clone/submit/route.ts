@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // 1. Rate limiting — strictly limited: 1 multi-clone per 2 minutes per user
-  if (!checkRateLimit(`multi-clone:${session.user.id}`, RATE_LIMITS.multiClone)) {
+  if (!(await checkRateLimit(`multi-clone:${session.user.id}`, RATE_LIMITS.multiClone))) {
     return ApiErrors.tooManyRequests();
   }
 
@@ -59,8 +59,9 @@ export async function POST(req: NextRequest) {
         db.video.create({
           data: {
             userId,
-            status: "PENDING",
-            creditsUsed: 10,
+            status:       "PENDING",
+            falRequestId: res.request_id,
+            creditsUsed:  10,
             metadata: {
               requestId: res.request_id,
               type: "multi-clone-part",

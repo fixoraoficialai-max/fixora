@@ -123,11 +123,12 @@ model Scene {
 model Video {
   id           String      @id @default(cuid())
   status       VideoStatus @default(PENDING)
-  url          String?     // TODO:INTEGRATION — storage URL when video is ready
+  url          String?
   thumbnailUrl String?
   duration     Int?        // total seconds
   errorMessage String?     @db.Text
-  metadata     Json?       // provider-specific response data
+  metadata     Json?       // provider-specific response data (kept for history display)
+  falRequestId String?     @unique // dedicated column for O(1) webhook lookup — never scan JSON
   creditsUsed  Int         @default(1)
   projectId    String?
   userId       String
@@ -138,6 +139,7 @@ model Video {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, status])
   @@index([projectId])
   @@map("videos")
 }

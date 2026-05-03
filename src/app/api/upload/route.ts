@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
-  if (!checkRateLimit(`upload:${session.user.id}`, RATE_LIMITS.upload)) {
+  if (!(await checkRateLimit(`upload:${session.user.id}`, RATE_LIMITS.upload))) {
     return ApiErrors.tooManyRequests();
   }
 

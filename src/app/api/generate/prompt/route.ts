@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // 5 optimizations per minute per user — isolated from video generation quota
-  if (!checkRateLimit(`prompt:${session.user.id}`, RATE_LIMITS.generate)) {
+  if (!(await checkRateLimit(`prompt:${session.user.id}`, RATE_LIMITS.generate))) {
     return ApiErrors.tooManyRequests();
   }
 

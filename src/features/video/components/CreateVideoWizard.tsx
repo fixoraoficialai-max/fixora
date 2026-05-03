@@ -1,25 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useProjectStore } from "@/stores/useProjectStore";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
 import { StepProjectSetup } from "./wizard/StepProjectSetup";
 import { StepSceneBuilder } from "./wizard/StepSceneBuilder";
 import { StepStyleAndTone } from "./wizard/StepStyleAndTone";
 import { StepReview } from "./wizard/StepReview";
 import { cn } from "@/lib/utils";
 import { CheckCircle } from "lucide-react";
-
-const STEPS = [
-  { id: 0, title: "Project Setup", description: "Name, platform, format" },
-  { id: 1, title: "Scene Builder", description: "Structure your video" },
-  { id: 2, title: "Style & Tone", description: "Visual identity" },
-  { id: 3, title: "Review", description: "Confirm & generate" },
-] as const;
+import { useTranslations } from "next-intl";
 
 export function CreateVideoWizard() {
+  const t = useTranslations("video");
   const { currentStep } = useProjectStore();
+
+  const STEPS = [
+    { id: 0, title: t("step0Title") },
+    { id: 1, title: t("step1Title") },
+    { id: 2, title: t("step2Title") },
+    { id: 3, title: t("step3Title") },
+  ];
+
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   return (
@@ -28,7 +29,7 @@ export function CreateVideoWizard() {
       <div className="mb-8">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-medium text-text-primary">
-            Step {currentStep + 1} of {STEPS.length}
+            {t("stepOf", { current: currentStep + 1, total: STEPS.length })}
           </span>
           <span className="text-sm text-text-muted">
             {STEPS[currentStep]?.title}

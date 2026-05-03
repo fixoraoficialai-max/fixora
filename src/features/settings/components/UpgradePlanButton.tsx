@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Loader2, Zap, Star, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FormAlert } from "@/components/ui/form-alert";
 import type { PlanId, PlanConfig } from "@/lib/stripe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,11 +91,7 @@ export function UpgradePlanButton({
 
   return (
     <div className="mt-4 flex flex-col gap-4">
-      {error && (
-        <div role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
-          {error}
-        </div>
-      )}
+      {error && <FormAlert variant="error">{error}</FormAlert>}
 
       {/* Plan cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

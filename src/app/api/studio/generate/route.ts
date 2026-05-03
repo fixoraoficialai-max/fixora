@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // 1. Rate limit — 3 scene generations per minute per user
-  if (!checkRateLimit(`studio:${session.user.id}`, RATE_LIMITS.studio)) {
+  if (!(await checkRateLimit(`studio:${session.user.id}`, RATE_LIMITS.studio))) {
     return ApiErrors.tooManyRequests();
   }
 
@@ -91,8 +91,9 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         projectId,
-        status:      "PENDING",
-        creditsUsed: STUDIO_SCENE_CREDITS,
+        status:       "PENDING",
+        falRequestId: request_id,
+        creditsUsed:  STUDIO_SCENE_CREDITS,
         metadata: {
           requestId: request_id,
           type:      "studio-scene",

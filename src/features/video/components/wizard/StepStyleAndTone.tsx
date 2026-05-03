@@ -5,36 +5,36 @@ import { useProjectStore } from "@/stores/useProjectStore";
 import { Button } from "@/components/ui/button";
 import { VIDEO_TONES, type VideoTone } from "@/types";
 import { cn } from "@/lib/utils";
-
-const TONE_DESCRIPTIONS: Record<VideoTone, string> = {
-  Professional: "Clean, authoritative, trustworthy",
-  Inspirational: "Uplifting, motivating, aspirational",
-  Energetic: "Fast-paced, dynamic, exciting",
-  Calm: "Slow, meditative, peaceful",
-  Playful: "Fun, light, engaging",
-  Urgent: "Time-sensitive, action-driven",
-  Educational: "Clear, informative, structured",
-  Emotional: "Heartfelt, human, touching",
-};
+import { useTranslations } from "next-intl";
 
 export function StepStyleAndTone() {
+  const t = useTranslations("video");
   const { projectData, updateProjectData, nextStep, prevStep } = useProjectStore();
 
   const selectedTone = projectData.tone as VideoTone | undefined;
 
+  const TONE_DESCRIPTIONS: Record<VideoTone, string> = {
+    Professional:  t("toneProfessional"),
+    Inspirational: t("toneInspirational"),
+    Energetic:     t("toneEnergetic"),
+    Calm:          t("toneCalm"),
+    Playful:       t("tonePlayful"),
+    Urgent:        t("toneUrgent"),
+    Educational:   t("toneEducational"),
+    Emotional:     t("toneEmotional"),
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">Style & Tone</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Define the emotional tone and visual direction for the entire video.
-        </p>
+        <h2 className="text-lg font-semibold text-text-primary">{t("styleToneTitle")}</h2>
+        <p className="mt-1 text-sm text-text-muted">{t("styleToneSubtitle")}</p>
       </div>
 
       {/* Tone selection */}
       <div>
         <label className="mb-3 block text-sm font-medium text-text-secondary">
-          Video tone
+          {t("styleToneLabel")}
         </label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {VIDEO_TONES.map((tone) => (
@@ -68,23 +68,20 @@ export function StepStyleAndTone() {
       {/* Info card */}
       <div className="rounded-xl border border-border bg-surface-elevated p-4">
         <p className="text-xs font-medium text-text-secondary mb-2">
-          About style configuration
+          {t("styleToneInfoTitle")}
         </p>
         <p className="text-xs text-text-muted leading-relaxed">
-          Tone affects how the AI interprets transitions, pacing, and visual choices.
-          Individual scene visual styles take precedence but the overall tone shapes the
-          final edit. Advanced style options (color grade, music, typography) will be
-          available in a future update.
+          {t("styleToneInfoBody")}
         </p>
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <Button type="button" variant="secondary" onClick={prevStep}>
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t("back")}
         </Button>
         <Button type="button" onClick={nextStep}>
-          Review & generate
+          {t("styleReviewGenerate")}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>

@@ -8,8 +8,10 @@
  *  - All functions are pure and throw on invalid state.
  */
 
-import { NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { ApiErrors } from "@/lib/api/response";
+import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
 
 
 // ─── SSRF Guard ───────────────────────────────────────────────────────────────
@@ -57,31 +59,52 @@ export function assertAllowedProxyUrl(raw: string | null): URL | ReturnType<type
 
 // ─── Webhook Authentication ───────────────────────────────────────────────────
 
-const WEBHOOK_SECRET_HEADER = "x-fal-signature";
-
 /**
- * Validates that an incoming webhook request carries the correct shared secret.
- * The secret is compared using constant-time comparison to prevent timing attacks.
+ * Verifies a Fal.ai webhook request using HMAC-SHA256.
  *
- * Returns true if the request is authentic, false otherwise.
+ * Fal.ai signs the raw request body with HMAC-SHA256 (key = FAL_WEBHOOK_SECRET)
+ * and sends the hex-encoded digest in the `x-fal-signature` header.
+ *
+ * We must:
+ *  1. Read the raw body BEFORE JSON parsing (caller's responsibility).
+ *  2. Recompute the expected MAC.
+ *  3. Compare via constant-time to prevent timing attacks.
+ *
+ * @param rawBody   - The raw request body string (read via `req.text()`)
+ * @param signature - The value of the `x-fal-signature` header
  */
-export function isValidWebhookRequest(req: NextRequest): boolean {
+export async function verifyFalWebhookHmac(rawBody: string, signature: string | null): Promise<boolean> {
   const secret = process.env.FAL_WEBHOOK_SECRET;
   if (!secret) {
     console.error("[security] FAL_WEBHOOK_SECRET is not set — rejecting all webhooks");
     return false;
   }
 
-  const provided = req.headers.get(WEBHOOK_SECRET_HEADER);
-  if (!provided) return false;
+  if (!signature) return false;
 
-  // Constant-time comparison to prevent timing attacks
-  return timingSafeEqual(provided, secret);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const mac = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(rawBody),
+  );
+
+  const expected = Array.from(new Uint8Array(mac))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return timingSafeEqual(signature, expected);
 }
 
 /**
- * Constant-time string comparison.
- * Prevents attackers from inferring the secret character-by-character via response timing.
+ * Constant-time string comparison — prevents timing-based secret inference.
  */
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -92,22 +115,7 @@ function timingSafeEqual(a: string, b: string): boolean {
   return mismatch === 0;
 }
 
-// ─── In-Memory Rate Limiter ───────────────────────────────────────────────────
-
-/**
- * Simple in-memory sliding-window rate limiter.
- *
- * NOTE: This works per-process. In multi-instance deployments (e.g., multiple
- * Vercel lambda instances), use @upstash/ratelimit backed by Redis instead.
- * For a single-instance deployment (Railway, Fly.io, VPS), this is sufficient.
- */
-
-interface RateLimitEntry {
-  count: number;
-  windowStart: number;
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>();
+// ─── Rate Limiter (Redis-backed, in-memory fallback) ─────────────────────────
 
 interface RateLimitOptions {
   /** Maximum number of requests allowed in the window. */
@@ -116,40 +124,93 @@ interface RateLimitOptions {
   windowMs: number;
 }
 
-/**
- * Checks and increments the rate limit for a given key.
- *
- * @param key    - Unique identifier (e.g., `upload:userId`)
- * @param opts   - limit and window configuration
- * @returns true if the request is allowed, false if rate-limited
- */
-export function checkRateLimit(key: string, opts: RateLimitOptions): boolean {
-  const now = Date.now();
+// ── In-memory fallback (per-process) ─────────────────────────────────────────
+
+interface RateLimitEntry { count: number; windowStart: number; }
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+function rateLimitInMemory(key: string, opts: RateLimitOptions): boolean {
+  const now   = Date.now();
   const entry = rateLimitStore.get(key);
 
   if (!entry || now - entry.windowStart > opts.windowMs) {
-    // New window
     rateLimitStore.set(key, { count: 1, windowStart: now });
     return true;
   }
 
   if (entry.count >= opts.limit) return false;
-
   entry.count += 1;
   return true;
+}
+
+// ── Redis limiters (sliding window, distributed across all instances) ─────────
+
+const redisLimiters = new Map<string, Ratelimit | null>();
+
+function getRedisLimiter(limit: number, windowMs: number): Ratelimit | null {
+  const mapKey = `${limit}:${windowMs}`;
+  if (redisLimiters.has(mapKey)) return redisLimiters.get(mapKey) ?? null;
+
+  const url   = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    redisLimiters.set(mapKey, null);
+    return null;
+  }
+
+  const limiter = new Ratelimit({
+    redis:     new Redis({ url, token }),
+    limiter:   Ratelimit.slidingWindow(limit, `${windowMs}ms`),
+    analytics: false,
+    prefix:    "@fixora/user-rl",
+  });
+
+  redisLimiters.set(mapKey, limiter);
+  return limiter;
+}
+
+/**
+ * Checks the per-user rate limit for a given key.
+ *
+ * Primary: Upstash Redis sliding window (works across all Vercel instances).
+ * Fallback: in-memory sliding window (used when Redis is unavailable).
+ *
+ * @param key   - Scoped identifier, e.g. `generate:userId`
+ * @param opts  - limit and windowMs configuration
+ * @returns true if the request is allowed, false if rate-limited
+ */
+export async function checkRateLimit(key: string, opts: RateLimitOptions): Promise<boolean> {
+  const limiter = getRedisLimiter(opts.limit, opts.windowMs);
+
+  if (limiter) {
+    try {
+      const { success } = await limiter.limit(key);
+      return success;
+    } catch {
+      // Redis failure → degrade gracefully to in-memory
+    }
+  }
+
+  return rateLimitInMemory(key, opts);
 }
 
 // ─── Rate limit presets (single source of truth) ─────────────────────────────
 
 export const RATE_LIMITS = {
-  upload:     { limit: 20, windowMs: 60_000 },        // 20 uploads/min
-  generate:   { limit: 5,  windowMs: 60_000 },        // 5 generations/min
-  clone:      { limit: 3,  windowMs: 60_000 },        // 3 clones/min
-  multiClone: { limit: 1,  windowMs: 120_000 },       // 1 multi-clone/2min
-  ad:         { limit: 2,  windowMs: 120_000 },       // 2 ad videos/2min
-  studio:     { limit: 3,  windowMs: 60_000 },        // 3 scene generations/min
-  auth:       { limit: 10, windowMs: 60_000 },        // 10 login attempts/min
-  contact:    { limit: 2,  windowMs: 30 * 60_000 },   // 2 messages/30min — anti-spam
+  upload:         { limit: 20, windowMs: 60_000        },  // 20 uploads/min
+  generate:       { limit: 5,  windowMs: 60_000        },  // 5 video generations/min
+  image:          { limit: 10, windowMs: 60_000        },  // 10 image generations/min
+  wizardVideo:    { limit: 2,  windowMs: 120_000       },  // 2 wizard videos/2min
+  clone:          { limit: 3,  windowMs: 60_000        },  // 3 clones/min
+  multiClone:     { limit: 1,  windowMs: 120_000       },  // 1 multi-clone/2min
+  ad:             { limit: 2,  windowMs: 120_000       },  // 2 ad videos/2min
+  studio:         { limit: 3,  windowMs: 60_000        },  // 3 scene generations/min
+  auth:           { limit: 10, windowMs: 60_000        },  // 10 login attempts/min
+  contact:        { limit: 2,  windowMs: 30 * 60_000   },  // 2 messages/30min — anti-spam
+  forgotPassword: { limit: 3,  windowMs: 15 * 60_000   },  // 3 resets/15min — email abuse guard
+  userProfile:    { limit: 20, windowMs: 60_000        },  // 20 profile updates/min
+  userPassword:   { limit: 5,  windowMs: 60_000        },  // 5 password changes/min — bcrypt DoS guard
 } as const;
 
 // ─── IP Rate Limiter (Edge-compatible) ───────────────────────────────────────

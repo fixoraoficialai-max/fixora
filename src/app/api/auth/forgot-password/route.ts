@@ -1,75 +1,60 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { forgotPasswordSchema } from "@/lib/validations/auth";
 import { sendEmail } from "@/lib/email";
 import { buildPasswordResetEmail } from "@/lib/email/templates";
+import { ApiErrors, apiSuccess } from "@/lib/api/response";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
 import crypto from "crypto";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  let body: unknown;
   try {
-    const body = await req.json();
-    const parsed = forgotPasswordSchema.safeParse(body);
-
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? "Invalid input";
-      return NextResponse.json({ success: false, error: message }, { status: 400 });
-    }
-
-    const { email } = parsed.data;
-
-    // 1. Check if user exists
-    const user = await db.user.findUnique({
-      where: { email },
-      select: { id: true, password: true },
-    });
-
-    // Security: Always return success even if user doesn't exist
-    // to prevent email enumeration attacks.
-    if (!user || !user.password) {
-      return NextResponse.json({ success: true });
-    }
-
-    // 2. Generate secure token
-    const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
-
-    // 3. Save to database (upsert to overwrite any existing token for this email)
-    // Prisma requires a unique identifier for upsert, or we can just delete and create.
-    // Since @@unique([identifier, token]) is used, we'll just delete many by identifier.
-    await db.verificationToken.deleteMany({
-      where: { identifier: email },
-    });
-
-    await db.verificationToken.create({
-      data: {
-        identifier: email,
-        token,
-        expires,
-      },
-    });
-
-    // 4. Send email
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const resetUrl = `${appUrl}/reset-password?token=${token}`;
-    
-    const emailSent = await sendEmail({
-      to: email,
-      subject: "Reset your Fixora Video password",
-      html: buildPasswordResetEmail(resetUrl),
-    });
-
-    if (!emailSent) {
-      return NextResponse.json(
-        { success: false, error: "Failed to send email. Please try again later." },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
+    body = await req.json();
   } catch {
-    return NextResponse.json(
-      { success: false, error: "An unexpected error occurred" },
-      { status: 500 }
-    );
+    return ApiErrors.validation({ message: "Invalid JSON body" });
   }
+
+  const parsed = forgotPasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    return ApiErrors.validation({ message: parsed.error.issues[0]?.message ?? "Invalid input" });
+  }
+
+  const { email } = parsed.data;
+
+  // Rate limit by email — prevents email-spam abuse (3 resets / 15 min per address)
+  if (!(await checkRateLimit(`forgotPassword:${email}`, RATE_LIMITS.forgotPassword))) {
+    return ApiErrors.tooManyRequests();
+  }
+
+  // Security: always return success even if user doesn't exist — prevents email enumeration
+  const user = await db.user.findUnique({
+    where: { email },
+    select: { id: true, password: true },
+  });
+
+  if (!user?.password) {
+    return apiSuccess({});
+  }
+
+  const token   = crypto.randomBytes(32).toString("hex");
+  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.verificationToken.deleteMany({ where: { identifier: email } });
+  await db.verificationToken.create({ data: { identifier: email, token, expires } });
+
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const resetUrl = `${appUrl}/reset-password?token=${token}`;
+
+  const emailSent = await sendEmail({
+    to: email,
+    subject: "Reset your Fixora Video password",
+    html: buildPasswordResetEmail(resetUrl),
+  });
+
+  if (!emailSent) {
+    return ApiErrors.internal();
+  }
+
+  return apiSuccess({});
 }

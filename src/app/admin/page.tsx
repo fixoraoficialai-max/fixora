@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Users, Zap, Crown, Shield, Search,
   RefreshCw, Plus, Minus, CheckCircle2,
   AlertCircle, Loader2, ChevronUp, ChevronDown,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -23,13 +24,26 @@ interface AdminUser {
   subscription:  { plan: string; status: string; renewsAt: string | null } | null;
 }
 
-type SortField = "createdAt" | "credits" | "email";
+interface ApiStats {
+  total:     number;
+  active:    number;
+  noCredits: number;
+  admins:    number;
+}
+
+type SortField = "createdAt" | "email";
 type SortDir   = "asc" | "desc";
+
+const PAGE_SIZE = 50;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const [users,    setUsers]    = useState<AdminUser[]>([]);
+  const [stats,    setStats]    = useState<ApiStats>({ total: 0, active: 0, noCredits: 0, admins: 0 });
+  const [total,    setTotal]    = useState(0);
+  const [pages,    setPages]    = useState(1);
+  const [page,     setPage]     = useState(1);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
   const [search,   setSearch]   = useState("");
@@ -43,46 +57,56 @@ export default function AdminPage() {
   const [adjustLoading,setAdjustLoading]= useState(false);
   const [adjustMsg,    setAdjustMsg]    = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Debounce search
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [search]);
+
   // ── Fetch users ─────────────────────────────────────────────────────────────
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (opts?: { resetPage?: boolean }) => {
+    const currentPage = opts?.resetPage ? 1 : page;
     setLoading(true);
     setError(null);
     try {
-      const res  = await fetch("/api/admin/users");
+      const params = new URLSearchParams({
+        page:    String(currentPage),
+        limit:   String(PAGE_SIZE),
+        sortBy,
+        sortDir,
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      });
+      const res  = await fetch(`/api/admin/users?${params}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message ?? "Failed to load users");
       setUsers(json.data.users);
+      setTotal(json.data.total);
+      setPages(json.data.pages);
+      setStats(json.data.stats);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, sortBy, sortDir, debouncedSearch]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // ── Sorting + filtering ──────────────────────────────────────────────────────
+  // ── Sorting ──────────────────────────────────────────────────────────────────
 
   const toggleSort = (field: SortField) => {
     if (sortBy === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
     else { setSortBy(field); setSortDir("desc"); }
+    setPage(1);
   };
-
-  const filtered = users
-    .filter((u) => {
-      const q = search.toLowerCase();
-      return !q || u.email.toLowerCase().includes(q) || (u.name ?? "").toLowerCase().includes(q);
-    })
-    .sort((a, b) => {
-      let av: number | string, bv: number | string;
-      if (sortBy === "credits")   { av = a.credits.balance; bv = b.credits.balance; }
-      else if (sortBy === "email"){ av = a.email;           bv = b.email; }
-      else                        { av = a.createdAt;       bv = b.createdAt; }
-      return sortDir === "asc"
-        ? (av < bv ? -1 : av > bv ? 1 : 0)
-        : (av > bv ? -1 : av < bv ? 1 : 0);
-    });
 
   // ── Adjust credits ───────────────────────────────────────────────────────────
 
@@ -105,7 +129,6 @@ export default function AdminPage() {
 
       setAdjustMsg({ type: "success", text: `Balance updated → ${json.data.balance} credits` });
 
-      // Update local state immediately
       setUsers((prev) => prev.map((u) =>
         u.id === adjusting.id
           ? { ...u, credits: { balance: json.data.balance, lifetime: json.data.lifetime } }
@@ -117,15 +140,6 @@ export default function AdminPage() {
       setAdjustLoading(false);
     }
   }
-
-  // ── Stats ────────────────────────────────────────────────────────────────────
-
-  const stats = {
-    total:   users.length,
-    active:  users.filter((u) => u.subscription?.status === "active").length,
-    noCredits: users.filter((u) => u.credits.balance === 0).length,
-    admins:  users.filter((u) => u.role === "ADMIN").length,
-  };
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -160,7 +174,7 @@ export default function AdminPage() {
             className="w-full rounded-lg border border-border bg-surface-elevated pl-9 pr-3 py-2 text-base text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
-        <Button variant="secondary" size="sm" onClick={fetchUsers} disabled={loading}>
+        <Button variant="secondary" size="sm" onClick={() => fetchUsers()} disabled={loading}>
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
@@ -180,10 +194,10 @@ export default function AdminPage() {
             <thead>
               <tr className="border-b border-border bg-surface-elevated/50">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">User</th>
-                <SortHeader field="credits"   label="Credits"   current={sortBy} dir={sortDir} onSort={toggleSort} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Credits</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Plan</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Auth</th>
-                <SortHeader field="createdAt" label="Joined"    current={sortBy} dir={sortDir} onSort={toggleSort} />
+                <SortHeader field="email"     label="Email"  current={sortBy} dir={sortDir} onSort={toggleSort} />
+                <SortHeader field="createdAt" label="Joined" current={sortBy} dir={sortDir} onSort={toggleSort} />
                 <th className="px-4 py-3 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -194,14 +208,14 @@ export default function AdminPage() {
                     <Loader2 className="h-5 w-5 animate-spin mx-auto text-text-muted" />
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-sm text-text-muted">
                     No users found
                   </td>
                 </tr>
               ) : (
-                filtered.map((user) => (
+                users.map((user) => (
                   <UserRow
                     key={user.id}
                     user={user}
@@ -214,7 +228,35 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-text-muted">{filtered.length} of {users.length} users</p>
+      {/* Pagination */}
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-xs text-text-muted">
+          {total > 0
+            ? `${((page - 1) * PAGE_SIZE) + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total} users`
+            : "0 users"}
+        </p>
+        {pages > 1 && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="secondary" size="sm"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-xs text-text-muted px-2">
+              {page} / {pages}
+            </span>
+            <Button
+              variant="secondary" size="sm"
+              disabled={page >= pages || loading}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Adjust credits modal */}
       {adjusting && (
@@ -330,9 +372,9 @@ function SortHeader({ field, label, current, dir, onSort }: {
 }
 
 function UserRow({ user, onAdjust }: { user: AdminUser; onAdjust: () => void }) {
-  const plan      = user.subscription?.plan ?? "FREE";
-  const isLow     = user.credits.balance <= 5;
-  const isEmpty   = user.credits.balance === 0;
+  const plan    = user.subscription?.plan ?? "FREE";
+  const isLow   = user.credits.balance <= 5;
+  const isEmpty = user.credits.balance === 0;
 
   return (
     <tr className="hover:bg-surface-elevated/40 transition-colors">
@@ -349,7 +391,6 @@ function UserRow({ user, onAdjust }: { user: AdminUser; onAdjust: () => void }) 
                 </span>
               )}
             </p>
-            <p className="text-xs text-text-muted truncate max-w-[160px]">{user.email}</p>
           </div>
         </div>
       </td>
@@ -367,17 +408,9 @@ function UserRow({ user, onAdjust }: { user: AdminUser; onAdjust: () => void }) 
         <PlanBadge plan={plan} status={user.subscription?.status} />
       </td>
 
-      {/* Auth provider */}
-      <td className="px-4 py-3">
-        <div className="flex gap-1">
-          {user.providers.length > 0
-            ? user.providers.map((p) => (
-                <span key={p} className="text-2xs bg-surface-overlay border border-border rounded px-1.5 py-0.5 text-text-muted capitalize">
-                  {p}
-                </span>
-              ))
-            : <span className="text-2xs bg-surface-overlay border border-border rounded px-1.5 py-0.5 text-text-muted">email</span>}
-        </div>
+      {/* Email */}
+      <td className="px-4 py-3 text-xs text-text-muted truncate max-w-[200px]">
+        {user.email}
       </td>
 
       {/* Joined */}
@@ -397,7 +430,7 @@ function UserRow({ user, onAdjust }: { user: AdminUser; onAdjust: () => void }) 
 }
 
 function PlanBadge({ plan, status }: { plan: string; status?: string }) {
-  const isPaid  = plan !== "FREE";
+  const isPaid    = plan !== "FREE";
   const isPastDue = status === "past_due";
   return (
     <span className={`text-2xs font-semibold rounded px-1.5 py-0.5 border ${

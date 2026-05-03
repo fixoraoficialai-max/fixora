@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id || !session.user.email) return ApiErrors.unauthorized();
 
   // Rate limit: 10 checkout attempts/min per user
-  if (!checkRateLimit(`checkout:${session.user.id}`, RATE_LIMITS.auth)) {
+  if (!(await checkRateLimit(`checkout:${session.user.id}`, RATE_LIMITS.auth))) {
     return ApiErrors.tooManyRequests();
   }
 

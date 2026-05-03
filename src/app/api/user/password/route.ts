@@ -1,77 +1,62 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { changePasswordSchema } from "@/lib/validations/user";
-import bcrypt from "bcryptjs";
+import { ApiErrors, apiSuccess } from "@/lib/api/response";
 import { logAudit, AuditAction } from "@/lib/audit";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
+import bcrypt from "bcryptjs";
 
 /**
  * PATCH /api/user/password
  * Changes the authenticated user's password.
- * Requires current password verification. OAuth users are rejected cleanly.
+ * Rate-limited per user to prevent bcrypt-based CPU DoS.
  */
-export async function PATCH(req: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return ApiErrors.unauthorized();
 
-    const body = await req.json();
-    const parsed = changePasswordSchema.safeParse(body);
-
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? "Invalid input";
-      return NextResponse.json({ success: false, error: message }, { status: 400 });
-    }
-
-    const { currentPassword, newPassword } = parsed.data;
-
-    // 1. Fetch user — only retrieve what's needed
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, password: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
-    }
-
-    // 2. Block OAuth-only accounts (no local password set)
-    if (!user.password) {
-      return NextResponse.json(
-        { success: false, error: "Your account uses an external provider (e.g. Google). Password changes are not supported." },
-        { status: 400 }
-      );
-    }
-
-    // 3. Verify current password before allowing any change
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
-      return NextResponse.json(
-        { success: false, error: "Incorrect current password" },
-        { status: 400 }
-      );
-    }
-
-    // 4. Hash and persist the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await db.user.update({
-      where: { id: user.id },
-      data: { password: hashedPassword },
-    });
-
-    // 5. Record a LOGIN_SUCCESS audit entry to mark the password change event
-    logAudit(AuditAction.LOGIN_SUCCESS, {
-      userId: user.id,
-      metadata: { event: "password_changed" },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json(
-      { success: false, error: "An unexpected error occurred while changing password" },
-      { status: 500 }
-    );
+  // bcrypt.compare is ~100ms CPU — rate limit prevents parallel DoS
+  if (!(await checkRateLimit(`userPassword:${session.user.id}`, RATE_LIMITS.userPassword))) {
+    return ApiErrors.tooManyRequests();
   }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return ApiErrors.validation({ message: "Invalid JSON body" });
+  }
+
+  const parsed = changePasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    return ApiErrors.validation({ message: parsed.error.issues[0]?.message ?? "Invalid input" });
+  }
+
+  const { currentPassword, newPassword } = parsed.data;
+
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, password: true },
+  });
+
+  if (!user) return ApiErrors.notFound("User");
+
+  if (!user.password) {
+    return ApiErrors.validation({
+      message: "Your account uses an external provider (e.g. Google). Password changes are not supported.",
+    });
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isValid) {
+    return ApiErrors.validation({ message: "Incorrect current password" });
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+  await db.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+
+  logAudit(AuditAction.PASSWORD_CHANGED, { userId: user.id });
+
+  return apiSuccess({});
 }

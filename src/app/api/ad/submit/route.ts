@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // 1. Rate limit — 2 ad videos per 2 minutes per user
-  if (!checkRateLimit(`ad:${session.user.id}`, RATE_LIMITS.ad)) {
+  if (!(await checkRateLimit(`ad:${session.user.id}`, RATE_LIMITS.ad))) {
     return ApiErrors.tooManyRequests();
   }
 
@@ -56,8 +56,9 @@ export async function POST(req: NextRequest) {
     const video = await db.video.create({
       data: {
         userId,
-        status:      "PENDING",
-        creditsUsed: AD_CREDITS,
+        status:       "PENDING",
+        falRequestId: request_id,
+        creditsUsed:  AD_CREDITS,
         metadata: {
           requestId:       request_id,
           type:            "ad",

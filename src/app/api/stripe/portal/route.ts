@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // Rate limit: reuse auth tier (10 calls/min is more than enough for portal access)
-  if (!checkRateLimit(`portal:${session.user.id}`, RATE_LIMITS.auth)) {
+  if (!(await checkRateLimit(`portal:${session.user.id}`, RATE_LIMITS.auth))) {
     return ApiErrors.tooManyRequests();
   }
 

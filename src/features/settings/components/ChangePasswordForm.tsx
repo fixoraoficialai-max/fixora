@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { changePasswordSchema, type ChangePasswordInput } from "@/lib/validations/user";
 import { Input, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FormAlert } from "@/components/ui/form-alert";
 import { Lock, CheckCircle2 } from "lucide-react";
 
 interface ChangePasswordFormProps {
@@ -69,17 +70,13 @@ export function ChangePasswordForm({ hasPassword }: ChangePasswordFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4 mt-4 p-4 border border-border rounded-lg bg-surface/50">
       <h3 className="text-sm font-medium text-text-primary mb-2">{t("changePassword")}</h3>
 
-      {serverError && (
-        <div role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
-          {serverError}
-        </div>
-      )}
+      {serverError && <FormAlert variant="error">{serverError}</FormAlert>}
 
       {successMessage && (
-        <div role="alert" className="rounded-md border border-success/30 bg-success/10 px-3 py-2 text-xs text-success flex items-center gap-2">
+        <FormAlert variant="success">
           <CheckCircle2 className="h-4 w-4" />
           {successMessage}
-        </div>
+        </FormAlert>
       )}
 
       <FormField label={t("currentPassword")} error={errors.currentPassword?.message} required>

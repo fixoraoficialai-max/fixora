@@ -8,9 +8,12 @@ const isProd = process.env.NODE_ENV === "production";
 
 // ─── Content Security Policy ──────────────────────────────────────────────────
 // 'unsafe-eval' is required by Next.js in development (for HMR/hot reload).
-// In production we remove it to prevent XSS attacks that execute injected scripts.
+// 'unsafe-inline' is NOT listed here — script-src-elem below covers <script> tags
+// (including inline scripts for reCAPTCHA). Omitting it from script-src blocks
+// inline event handlers (onclick="…") and javascript: URIs, neither of which
+// a React app should ever generate.
 const scriptSrc = isProd
-  ? "script-src 'self' 'unsafe-inline'"
+  ? "script-src 'self'"
   : "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
 
 const csp = [

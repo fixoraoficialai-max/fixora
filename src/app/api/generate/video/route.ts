@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { configureFal, fal } from "@/lib/fal";
 import { ApiErrors, apiSuccess } from "@/lib/api/response";
-import { checkCredits } from "@/lib/credits";
+import { reserveCredits, releaseCredits } from "@/lib/credits";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // ── Rate limit: 5 generations/min per user ────────────────────────────────
-  if (!checkRateLimit(`generate:${session.user.id}`, RATE_LIMITS.generate)) {
+  if (!(await checkRateLimit(`generate:${session.user.id}`, RATE_LIMITS.generate))) {
     return ApiErrors.tooManyRequests();
   }
 
@@ -109,8 +109,18 @@ export async function POST(req: NextRequest) {
   const { prompt, imageUrl, videoUrl, aspectRatio, duration, model, projectId } = parsed.data;
   const userId = session.user.id;
 
-  const hasCredits = await checkCredits(userId, CREDITS_REQUIRED);
-  if (!hasCredits) return ApiErrors.insufficientCredits();
+  // Verify project ownership before using projectId — prevents IDOR
+  if (projectId) {
+    const project = await db.project.findUnique({
+      where: { id: projectId, userId },
+      select: { id: true },
+    });
+    if (!project) return ApiErrors.notFound("Project");
+  }
+
+  // Atomic credit reservation — prevents race conditions on simultaneous requests
+  const reserved = await reserveCredits(userId, CREDITS_REQUIRED);
+  if (!reserved) return ApiErrors.insufficientCredits();
 
   const falModel = resolveModel(model, !!imageUrl, !!videoUrl);
   const payload  = buildPayload(model, prompt, imageUrl, videoUrl, aspectRatio, duration);
@@ -122,38 +132,32 @@ export async function POST(req: NextRequest) {
     outputUrl = result.video?.url ?? result.videos?.[0]?.url ?? "";
     if (!outputUrl) throw new Error("No video URL in Fal.ai response");
   } catch (falErr) {
+    // Fal.ai failed AFTER credits were reserved — return them immediately
+    await releaseCredits(userId, CREDITS_REQUIRED).catch(() => null);
     const msg = falErr instanceof Error ? falErr.message : "Video generation failed";
     return ApiErrors.validation({ message: msg });
   }
 
-  // ── Atomic: deduct credits + save video record together ───────────────────
+  // Credits already deducted — persist video record (non-critical)
   try {
-    await db.$transaction([
-      db.userCredits.update({
-        where: { userId },
-        data: { balance: { decrement: CREDITS_REQUIRED } },
-      }),
-      db.video.create({
-        data: {
-          projectId: projectId ?? null,
-          userId,
-          status: "COMPLETED",
-          url: outputUrl,
-          duration: parseInt(duration, 10),
-          creditsUsed: CREDITS_REQUIRED,
-        },
-      }),
-    ]);
-
+    const videoCreate = db.video.create({
+      data: {
+        projectId: projectId ?? null,
+        userId,
+        status:      "COMPLETED",
+        url:         outputUrl,
+        duration:    parseInt(duration, 10),
+        creditsUsed: CREDITS_REQUIRED,
+      },
+    });
     if (projectId) {
-      await db.project.update({
-        where: { id: projectId },
-        data: { status: "COMPLETED" },
-      });
+      const projectUpdate = db.project.update({ where: { id: projectId }, data: { status: "COMPLETED" } });
+      await db.$transaction([videoCreate, projectUpdate]);
+    } else {
+      await videoCreate;
     }
   } catch {
     // Video was generated — return it even if DB persistence fails.
-    // A transient DB error should not cause the user to lose their result.
   }
 
   return apiSuccess({ videoUrl: outputUrl, duration: parseInt(duration, 10) });

@@ -7,7 +7,8 @@ import { apiSuccess, ApiErrors } from "@/lib/api/response";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAX_PAGE_SIZE = 100;
+const MAX_PAGE_SIZE      = 100;
+const MAX_PROJECTS_PER_USER = 50;
 
 // Validated against actual Prisma enum — z.enum enforces only known values, eliminating unsafe casts
 const PROJECT_STATUS_VALUES = ["DRAFT", "IN_PROGRESS", "COMPLETED", "ARCHIVED"] as const;
@@ -73,6 +74,11 @@ export async function POST(req: NextRequest) {
   const parsed = createProjectSchema.safeParse(body);
   if (!parsed.success) {
     return ApiErrors.validation(parsed.error.flatten().fieldErrors);
+  }
+
+  const projectCount = await db.project.count({ where: { userId: session.user.id } });
+  if (projectCount >= MAX_PROJECTS_PER_USER) {
+    return ApiErrors.validation({ message: `Project limit reached (max ${MAX_PROJECTS_PER_USER})` });
   }
 
   const project = await db.project.create({

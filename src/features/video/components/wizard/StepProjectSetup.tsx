@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, FormField } from "@/components/ui/input";
 import { ASPECT_RATIO_OPTIONS } from "@/types";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const PLATFORMS = ["Instagram", "TikTok", "YouTube", "LinkedIn", "Twitter/X", "Facebook"];
 
 export function StepProjectSetup() {
+  const t = useTranslations("video");
   const { projectData, updateProjectData, nextStep } = useProjectStore();
 
   const {
@@ -43,16 +45,14 @@ export function StepProjectSetup() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">Project Setup</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Define the basics of your video project.
-        </p>
+        <h2 className="text-lg font-semibold text-text-primary">{t("setupTitle")}</h2>
+        <p className="mt-1 text-sm text-text-muted">{t("setupSubtitle")}</p>
       </div>
 
       <div className="flex flex-col gap-4">
-        <FormField label="Project name" error={errors.name?.message} required>
+        <FormField label={t("setupNameLabel")} error={errors.name?.message} required>
           <Input
-            placeholder="e.g. Q1 Product Launch Campaign"
+            placeholder={t("setupNamePlaceholder")}
             autoFocus
             {...register("name")}
             error={errors.name?.message}
@@ -60,12 +60,12 @@ export function StepProjectSetup() {
         </FormField>
 
         <FormField
-          label="Description"
+          label={t("setupDescLabel")}
           error={errors.description?.message}
-          hint="What is this video about? What's the core message?"
+          hint={t("setupDescHint")}
         >
           <Textarea
-            placeholder="Describe the goal of this video in a few sentences..."
+            placeholder={t("setupDescPlaceholder")}
             rows={3}
             {...register("description")}
             error={errors.description?.message}
@@ -75,7 +75,7 @@ export function StepProjectSetup() {
         {/* Aspect Ratio */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-text-secondary">
-            Aspect ratio <span className="text-danger">*</span>
+            {t("setupAspectLabel")} <span className="text-danger">*</span>
           </label>
           <div className="grid grid-cols-3 gap-3">
             {ASPECT_RATIO_OPTIONS.map((option) => (
@@ -115,7 +115,7 @@ export function StepProjectSetup() {
         </div>
 
         {/* Platform */}
-        <FormField label="Target platform" hint="Optional — helps optimize the output">
+        <FormField label={t("setupPlatformLabel")} hint={t("setupPlatformHint")}>
           <div className="flex flex-wrap gap-2">
             {PLATFORMS.map((platform) => (
               <button
@@ -140,7 +140,7 @@ export function StepProjectSetup() {
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button type="submit">
-          Continue to scenes
+          {t("setupContinue")}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>

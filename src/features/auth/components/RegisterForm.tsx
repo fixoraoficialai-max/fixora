@@ -10,6 +10,7 @@ import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, FormField } from "@/components/ui/input";
+import { FormAlert } from "@/components/ui/form-alert";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 // ─── Eye toggle helper ────────────────────────────────────────────────────────
@@ -83,11 +84,7 @@ export function RegisterForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-        {serverError && (
-          <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {serverError}
-          </div>
-        )}
+        {serverError && <FormAlert variant="error" size="md">{serverError}</FormAlert>}
 
         <FormField label={t("fullName")} error={errors.name?.message} required>
           <Input

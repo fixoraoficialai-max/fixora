@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validations/auth";
 import { Input, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FormAlert } from "@/components/ui/form-alert";
 import { Mail, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
@@ -75,11 +76,7 @@ export function ForgotPasswordForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-        {serverError && (
-          <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {serverError}
-          </div>
-        )}
+        {serverError && <FormAlert variant="error" size="md">{serverError}</FormAlert>}
 
         <FormField label={t("email")} error={errors.email?.message} required>
           <Input

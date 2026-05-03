@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
 
   // 2. Check lockout
-  const record = getAttempts(userId);
+  const record = await getAttempts(userId);
   if (isLockedOut(record)) {
     return NextResponse.json(
       { success: false, locked: true, remainingMs: remainingLockMs(record) },
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (pin !== adminPin) {
-    const updated    = recordFailure(userId);
+    const updated    = await recordFailure(userId);
     const nowLocked  = isLockedOut(updated);
     return NextResponse.json(
       {
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 6. PIN correct — issue signed cookie
-  clearAttempts(userId);
+  await clearAttempts(userId);
   const token = await createAdminToken(userId, cookieSecret());
 
   const response = NextResponse.json({ success: true, data: { ok: true } });

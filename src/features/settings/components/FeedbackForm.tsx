@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { contactSchema, CONTACT_CATEGORIES, type ContactInput, type ContactCategory } from "@/lib/validations/contact";
 import { Textarea, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FormAlert } from "@/components/ui/form-alert";
 import { CheckCircle2, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -128,11 +129,7 @@ export function FeedbackForm() {
       </FormField>
 
       {/* Server error */}
-      {serverError && (
-        <div role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
-          {serverError}
-        </div>
-      )}
+      {serverError && <FormAlert variant="error">{serverError}</FormAlert>}
 
       <div className="flex justify-end">
         <Button type="submit" variant="primary" disabled={isSubmitting} isLoading={isSubmitting}>

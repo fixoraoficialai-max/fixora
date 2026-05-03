@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const ip     = getClientIp(req);
 
   // 1. Rate limit — prevents users from spamming the "resend" button
-  if (!checkRateLimit(`send-verification:${userId}`, SEND_RATE_LIMIT)) {
+  if (!(await checkRateLimit(`send-verification:${userId}`, SEND_RATE_LIMIT))) {
     return ApiErrors.tooManyRequests();
   }
 

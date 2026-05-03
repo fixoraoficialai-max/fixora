@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id || !session.user.email) return ApiErrors.unauthorized();
 
   // 2. Rate limit — anti-spam
-  if (!checkRateLimit(`contact:${session.user.id}`, RATE_LIMITS.contact)) {
+  if (!(await checkRateLimit(`contact:${session.user.id}`, RATE_LIMITS.contact))) {
     return ApiErrors.tooManyRequests();
   }
 

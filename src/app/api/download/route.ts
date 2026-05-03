@@ -8,8 +8,9 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // ── Rate limit: 20 req/min per user ──────────────────────────────────────
-  const allowed = checkRateLimit(`download:${session.user.id}`, RATE_LIMITS.upload);
-  if (!allowed) return ApiErrors.tooManyRequests();
+  if (!(await checkRateLimit(`download:${session.user.id}`, RATE_LIMITS.upload))) {
+    return ApiErrors.tooManyRequests();
+  }
 
   // ── SSRF Guard: only allow trusted Fal.ai storage domains ────────────────
   const rawUrl = req.nextUrl.searchParams.get("url");

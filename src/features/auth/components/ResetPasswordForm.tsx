@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/validations/auth";
 import { Input, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,32 +13,30 @@ import { useSearchParams } from "next/navigation";
 
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+  const token        = searchParams.get("token");
+  const t            = useTranslations("auth");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [serverError, setServerError]   = useState<string | null>(null);
+  const [isSuccess, setIsSuccess]       = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<ResetPasswordInput>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: {
-      token: token ?? "",
-    },
+    resolver:      zodResolver(resetPasswordSchema),
+    defaultValues: { token: token ?? "" },
   });
 
+  // Invalid or missing token — show error state immediately
   if (!token) {
     return (
       <div className="w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Invalid Link</h1>
-        <p className="text-sm text-text-muted mb-8">
-          This password reset link is invalid or missing the required token. Please request a new one.
-        </p>
+        <h1 className="text-2xl font-bold text-text-primary mb-2">{t("invalidLinkTitle")}</h1>
+        <p className="text-sm text-text-muted mb-8">{t("invalidLinkDesc")}</p>
         <Button variant="primary" className="w-full" asChild>
-          <Link href="/forgot-password">Request new link</Link>
+          <Link href="/forgot-password">{t("requestNewLink")}</Link>
         </Button>
       </div>
     );
@@ -49,22 +48,22 @@ export function ResetPasswordForm() {
 
     try {
       const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body:    JSON.stringify(data),
       });
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        setServerError(result.error || "An unexpected error occurred. Please try again.");
+        setServerError(result.error || t("unexpectedError"));
         return;
       }
 
       setIsSuccess(true);
     } catch (err) {
       console.error(err);
-      setServerError("Network error. Please try again later.");
+      setServerError(t("networkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,12 +77,10 @@ export function ResetPasswordForm() {
             <CheckCircle2 className="h-8 w-8 text-success" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Password reset</h1>
-        <p className="text-sm text-text-muted mb-8">
-          Your password has been successfully reset. You can now sign in with your new password.
-        </p>
+        <h1 className="text-2xl font-bold text-text-primary mb-2">{t("passwordResetTitle")}</h1>
+        <p className="text-sm text-text-muted mb-8">{t("passwordResetDesc")}</p>
         <Button variant="primary" className="w-full" asChild>
-          <Link href="/login">Sign in</Link>
+          <Link href="/login">{t("signIn")}</Link>
         </Button>
       </div>
     );
@@ -92,8 +89,8 @@ export function ResetPasswordForm() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-text-primary">Set new password</h1>
-        <p className="mt-2 text-sm text-text-muted">Enter your new password below</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t("setNewPasswordTitle")}</h1>
+        <p className="mt-2 text-sm text-text-muted">{t("setNewPasswordSubtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
@@ -105,10 +102,10 @@ export function ResetPasswordForm() {
 
         <input type="hidden" {...register("token")} />
 
-        <FormField label="New Password" error={errors.password?.message} required>
+        <FormField label={t("newPassword")} error={errors.password?.message} required>
           <Input
             type="password"
-            placeholder="At least 8 characters"
+            placeholder={t("newPasswordMin")}
             icon={<Lock className="h-4 w-4" />}
             disabled={isSubmitting}
             {...register("password")}
@@ -116,10 +113,10 @@ export function ResetPasswordForm() {
           />
         </FormField>
 
-        <FormField label="Confirm Password" error={errors.confirmPassword?.message} required>
+        <FormField label={t("confirmPassword")} error={errors.confirmPassword?.message} required>
           <Input
             type="password"
-            placeholder="Repeat new password"
+            placeholder={t("repeatNewPassword")}
             icon={<Lock className="h-4 w-4" />}
             disabled={isSubmitting}
             {...register("confirmPassword")}
@@ -128,7 +125,7 @@ export function ResetPasswordForm() {
         </FormField>
 
         <Button type="submit" variant="primary" className="mt-2 w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Resetting..." : "Reset password"}
+          {isSubmitting ? t("resetting") : t("resetPasswordBtn")}
         </Button>
       </form>
     </div>

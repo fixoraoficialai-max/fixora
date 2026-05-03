@@ -7,14 +7,33 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, FormField } from "@/components/ui/input";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
+// ─── Eye toggle helper ────────────────────────────────────────────────────────
+
+function EyeToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="text-text-muted hover:text-text-primary transition-colors"
+      tabIndex={-1}
+    >
+      {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    </button>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function RegisterForm() {
-  const router = useRouter();
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const router              = useRouter();
+  const t                   = useTranslations("auth");
+  const [serverError, setServerError]           = useState<string | null>(null);
+  const [showPassword, setShowPassword]         = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
@@ -29,24 +48,20 @@ export function RegisterForm() {
     setServerError(null);
 
     const response = await fetch("/api/auth/register", {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-      }),
+      body:    JSON.stringify({ name: data.name, email: data.email, password: data.password }),
     });
 
     const result = await response.json() as { success: boolean; error?: { message: string } };
 
     if (!result.success) {
-      setServerError(result.error?.message ?? "Registration failed. Please try again.");
+      setServerError(result.error?.message ?? t("registrationFailed"));
       return;
     }
 
     const signInResult = await signIn("credentials", {
-      email: data.email,
+      email:    data.email,
       password: data.password,
       redirect: false,
     });
@@ -60,46 +75,24 @@ export function RegisterForm() {
     router.refresh();
   }
 
-  const EyeToggle = ({
-    show,
-    onToggle,
-  }: {
-    show: boolean;
-    onToggle: () => void;
-  }) => (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="text-text-muted hover:text-text-primary transition-colors"
-      tabIndex={-1}
-    >
-      {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-    </button>
-  );
-
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-text-primary">Create your account</h1>
-        <p className="mt-2 text-sm text-text-muted">
-          Start creating AI videos for free
-        </p>
+        <h1 className="text-2xl font-bold text-text-primary">{t("registerTitle")}</h1>
+        <p className="mt-2 text-sm text-text-muted">{t("registerSubtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
         {serverError && (
-          <div
-            role="alert"
-            className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
-          >
+          <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {serverError}
           </div>
         )}
 
-        <FormField label="Full name" error={errors.name?.message} required>
+        <FormField label={t("fullName")} error={errors.name?.message} required>
           <Input
             type="text"
-            placeholder="John Doe"
+            placeholder={t("fullNamePlaceholder")}
             icon={<User className="h-4 w-4" />}
             autoComplete="name"
             autoFocus
@@ -108,10 +101,10 @@ export function RegisterForm() {
           />
         </FormField>
 
-        <FormField label="Email" error={errors.email?.message} required>
+        <FormField label={t("email")} error={errors.email?.message} required>
           <Input
             type="email"
-            placeholder="you@company.com"
+            placeholder={t("emailPlaceholder")}
             icon={<Mail className="h-4 w-4" />}
             autoComplete="email"
             {...register("email")}
@@ -120,20 +113,17 @@ export function RegisterForm() {
         </FormField>
 
         <FormField
-          label="Password"
+          label={t("password")}
           error={errors.password?.message}
-          hint="Min 8 characters with uppercase, lowercase, and number"
+          hint={t("passwordHint")}
           required
         >
           <Input
             type={showPassword ? "text" : "password"}
-            placeholder="Create a strong password"
+            placeholder={t("createPasswordPlaceholder")}
             icon={<Lock className="h-4 w-4" />}
             rightElement={
-              <EyeToggle
-                show={showPassword}
-                onToggle={() => setShowPassword((v) => !v)}
-              />
+              <EyeToggle show={showPassword} onToggle={() => setShowPassword((v) => !v)} />
             }
             autoComplete="new-password"
             {...register("password")}
@@ -141,16 +131,13 @@ export function RegisterForm() {
           />
         </FormField>
 
-        <FormField label="Confirm password" error={errors.confirmPassword?.message} required>
+        <FormField label={t("confirmPassword")} error={errors.confirmPassword?.message} required>
           <Input
             type={showConfirmPassword ? "text" : "password"}
-            placeholder="Repeat your password"
+            placeholder={t("repeatPasswordPlaceholder")}
             icon={<Lock className="h-4 w-4" />}
             rightElement={
-              <EyeToggle
-                show={showConfirmPassword}
-                onToggle={() => setShowConfirmPassword((v) => !v)}
-              />
+              <EyeToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword((v) => !v)} />
             }
             autoComplete="new-password"
             {...register("confirmPassword")}
@@ -159,26 +146,26 @@ export function RegisterForm() {
         </FormField>
 
         <Button type="submit" isLoading={isSubmitting} className="w-full mt-1">
-          {isSubmitting ? "Creating account..." : "Create account"}
+          {isSubmitting ? t("creatingAccount") : t("createAccount")}
         </Button>
 
         <p className="text-center text-xs text-text-muted">
-          By creating an account, you agree to our{" "}
+          {t("termsAgreement")}{" "}
           <Link href="/terms" className="underline hover:text-text-secondary">
-            Terms of Service
+            {t("termsOfService")}
           </Link>{" "}
-          and{" "}
+          {t("and")}{" "}
           <Link href="/privacy" className="underline hover:text-text-secondary">
-            Privacy Policy
+            {t("privacyPolicy")}
           </Link>
-          .
+          {t("alreadyHaveAccountDot")}
         </p>
       </form>
 
       {/* ── Divider ── */}
       <div className="my-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-text-muted uppercase tracking-widest">or</span>
+        <span className="text-xs text-text-muted uppercase tracking-widest">{t("or")}</span>
         <div className="h-px flex-1 bg-border" />
       </div>
 
@@ -194,16 +181,13 @@ export function RegisterForm() {
           <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
           <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/>
         </svg>
-        Continue with Google
+        {t("continueGoogleRegister")}
       </button>
 
       <p className="mt-6 text-center text-sm text-text-muted">
-        Already have an account?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-primary-light hover:text-primary transition-colors"
-        >
-          Sign in
+        {t("alreadyHaveAccount")}{" "}
+        <Link href="/login" className="font-medium text-primary-light hover:text-primary transition-colors">
+          {t("signInLink")}
         </Link>
       </p>
     </div>

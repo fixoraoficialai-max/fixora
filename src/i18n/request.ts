@@ -1,11 +1,14 @@
 import { getRequestConfig } from "next-intl/server";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type Locale } from "./config";
 
 /**
  * Resolves the locale for each request.
- * Priority: cookie → Accept-Language header → default (es)
- * No routing changes — locales live entirely in cookies.
+ * Priority: NEXT_LOCALE cookie → default (es)
+ *
+ * Browser Accept-Language is intentionally NOT used.
+ * Fixora targets Spanish-speaking users: the default is always "es"
+ * unless the user explicitly switches language in Settings.
  */
 export default getRequestConfig(async () => {
   const locale = await resolveLocale();
@@ -18,31 +21,14 @@ export default getRequestConfig(async () => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Returns the cookie locale if it is a supported locale. */
-async function getLocaleFromCookie(): Promise<Locale | null> {
-  const cookieStore = await cookies();
-  const raw = cookieStore.get("NEXT_LOCALE")?.value;
-  return isSupported(raw) ? raw : null;
-}
-
-/** Parses the best-match locale from the Accept-Language header. */
-async function getLocaleFromBrowser(): Promise<Locale | null> {
-  const headerStore = await headers();
-  const acceptLang  = headerStore.get("accept-language") ?? "";
-  const preferred   = acceptLang.split(",").map((entry) => entry.split(";")[0]?.trim().slice(0, 2));
-  return preferred.find(isSupported) ?? null;
-}
-
 /**
- * Determines the locale to use for this request.
- * Single responsibility: encapsulates the priority logic.
+ * Returns the validated locale from the cookie, or the default locale.
+ * Single responsibility: reads and validates one value.
  */
 async function resolveLocale(): Promise<Locale> {
-  return (
-    (await getLocaleFromCookie()) ??
-    (await getLocaleFromBrowser()) ??
-    DEFAULT_LOCALE
-  );
+  const cookieStore = await cookies();
+  const raw         = cookieStore.get("NEXT_LOCALE")?.value;
+  return isSupported(raw) ? raw : DEFAULT_LOCALE;
 }
 
 function isSupported(value: string | undefined): value is Locale {

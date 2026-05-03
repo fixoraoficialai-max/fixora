@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validations/auth";
 import { Input, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,10 @@ import { Mail, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("auth");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [serverError, setServerError]   = useState<string | null>(null);
+  const [isSuccess, setIsSuccess]       = useState(false);
 
   const {
     register,
@@ -28,22 +30,22 @@ export function ForgotPasswordForm() {
 
     try {
       const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body:    JSON.stringify(data),
       });
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        setServerError(result.error || "An unexpected error occurred. Please try again.");
+        setServerError(result.error || t("unexpectedError"));
         return;
       }
 
       setIsSuccess(true);
     } catch (err) {
       console.error(err);
-      setServerError("Network error. Please try again later.");
+      setServerError(t("networkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -57,12 +59,10 @@ export function ForgotPasswordForm() {
             <CheckCircle2 className="h-8 w-8 text-success" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Check your email</h1>
-        <p className="text-sm text-text-muted mb-8">
-          We have sent a password reset link to your email address. Please check your inbox and spam folder.
-        </p>
+        <h1 className="text-2xl font-bold text-text-primary mb-2">{t("checkEmailTitle")}</h1>
+        <p className="text-sm text-text-muted mb-8">{t("checkEmailDesc")}</p>
         <Button variant="outline" className="w-full" asChild>
-          <Link href="/login">Return to login</Link>
+          <Link href="/login">{t("returnToLogin")}</Link>
         </Button>
       </div>
     );
@@ -71,8 +71,8 @@ export function ForgotPasswordForm() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-text-primary">Reset password</h1>
-        <p className="mt-2 text-sm text-text-muted">Enter your email to receive a reset link</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t("forgotTitle")}</h1>
+        <p className="mt-2 text-sm text-text-muted">{t("forgotSubtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
@@ -82,10 +82,10 @@ export function ForgotPasswordForm() {
           </div>
         )}
 
-        <FormField label="Email" error={errors.email?.message} required>
+        <FormField label={t("email")} error={errors.email?.message} required>
           <Input
             type="email"
-            placeholder="you@company.com"
+            placeholder={t("emailPlaceholder")}
             icon={<Mail className="h-4 w-4" />}
             autoComplete="email"
             autoFocus
@@ -96,12 +96,12 @@ export function ForgotPasswordForm() {
         </FormField>
 
         <Button type="submit" variant="primary" className="mt-2 w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Sending..." : "Send reset link"}
+          {isSubmitting ? t("sending") : t("sendResetLink")}
         </Button>
 
         <div className="mt-4 text-center text-sm">
           <Link href="/login" className="text-text-muted hover:text-text-primary transition-colors">
-            Back to login
+            {t("backToLogin")}
           </Link>
         </div>
       </form>

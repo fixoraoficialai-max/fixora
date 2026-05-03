@@ -16,9 +16,14 @@ let _redis: Redis | null | undefined = undefined; // undefined = not yet initial
 /** Returns the Redis client, initializing it on first call. Never throws. */
 function getRedis(): Redis | null {
   if (_redis !== undefined) return _redis;
-  const url   = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  _redis = (url && token) ? new Redis({ url, token }) : null;
+  try {
+    const url   = process.env.UPSTASH_REDIS_REST_URL?.trim();
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+    _redis = (url && token) ? new Redis({ url, token }) : null;
+  } catch {
+    // If the URL is still somehow invalid, fail gracefully to in-memory fallback
+    _redis = null;
+  }
   return _redis;
 }
 

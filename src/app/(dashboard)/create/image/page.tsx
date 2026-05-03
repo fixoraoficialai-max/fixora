@@ -234,60 +234,63 @@ export default function QuickImagePage() {
           )}
 
           {/* ── Results ── */}
-          {(generatedImages.length > 0 || isGenerating) && (
-            <div className="flex flex-col gap-6 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-white/60">
-                  {isGenerating ? "Generando tu visión..." : "Resultado"}
-                </p>
-                {!isGenerating && (
-                  <Button variant="ghost" size="sm" onClick={handleReset} className="text-white/40 hover:text-white">
-                    <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                    Nueva imagen
-                  </Button>
+          {(generatedImages.length > 0 || isGenerating) && (() => {
+            const firstImage = generatedImages[0];
+            return (
+              <div className="flex flex-col gap-6 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-white/60">
+                    {isGenerating ? "Generando tu visión..." : "Resultado"}
+                  </p>
+                  {!isGenerating && (
+                    <Button variant="ghost" size="sm" onClick={handleReset} className="text-white/40 hover:text-white">
+                      <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                      Nueva imagen
+                    </Button>
+                  )}
+                </div>
+
+                <div className="relative aspect-[9/16] md:aspect-square w-full max-w-[500px] mx-auto rounded-3xl overflow-hidden border border-white/10 bg-white/5">
+                  {isGenerating ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white/40">
+                      <Wand2 className="h-12 w-12 animate-pulse" />
+                      <p className="text-sm font-medium animate-pulse">Flux AI está creando...</p>
+                    </div>
+                  ) : firstImage ? (
+                    <>
+                      <img
+                        src={firstImage.imageUrl}
+                        alt="Generated"
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute bottom-6 right-6 flex gap-3">
+                        <a
+                          href={`/api/download?url=${encodeURIComponent(firstImage.imageUrl)}`}
+                          download
+                          className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
+                        >
+                          <Download className="h-5 w-5" />
+                        </a>
+                        <a
+                          href={`/create/video?imageUrl=${encodeURIComponent(firstImage.imageUrl)}`}
+                          className="flex h-12 px-6 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-hover shadow-xl shadow-primary/20 transition-all font-semibold gap-2"
+                        >
+                          <Zap className="h-4 w-4" />
+                          Animar
+                        </a>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+
+                {error && (
+                  <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger text-center">
+                    {error}
+                  </div>
                 )}
               </div>
-
-              <div className="relative aspect-[9/16] md:aspect-square w-full max-w-[500px] mx-auto rounded-3xl overflow-hidden border border-white/10 bg-white/5 shimmer-container">
-                {isGenerating ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white/40">
-                    <Wand2 className="h-12 w-12 animate-pulse" />
-                    <p className="text-sm font-medium animate-pulse">Flux AI está creando...</p>
-                  </div>
-                ) : generatedImages.length > 0 ? (
-                  <>
-                    <img 
-                      src={generatedImages[0].imageUrl} 
-                      alt="Generated" 
-                      className="h-full w-full object-cover" 
-                    />
-                    <div className="absolute bottom-6 right-6 flex gap-3">
-                      <a 
-                        href={`/api/download?url=${encodeURIComponent(generatedImages[0].imageUrl)}`} 
-                        download
-                        className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
-                      >
-                        <Download className="h-5 w-5" />
-                      </a>
-                      <a 
-                        href={`/create/video?imageUrl=${encodeURIComponent(generatedImages[0].imageUrl)}`}
-                        className="flex h-12 px-6 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-hover shadow-xl shadow-primary/20 transition-all font-semibold gap-2"
-                      >
-                        <Zap className="h-4 w-4" />
-                        Animar
-                      </a>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-              
-              {error && (
-                <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger text-center">
-                  {error}
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
         </div>
       </div>

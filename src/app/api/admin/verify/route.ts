@@ -43,85 +43,94 @@ function cookieSecret(): string {
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // 1. Auth — must be logged in as ADMIN
-  const session = await auth();
-  if (!session?.user?.id) return ApiErrors.unauthorized();
-  if ((session.user as { role?: string }).role !== "ADMIN") return ApiErrors.forbidden();
+  try {
+    // 1. Auth — must be logged in as ADMIN
+    const session = await auth();
+    if (!session?.user?.id) return ApiErrors.unauthorized();
+    if ((session.user as { role?: string }).role !== "ADMIN") return ApiErrors.forbidden();
 
-  const userId = session.user.id;
+    const userId = session.user.id;
 
-  // 2. Check lockout
-  const record = await getAttempts(userId);
-  if (isLockedOut(record)) {
-    return NextResponse.json(
-      { success: false, locked: true, remainingMs: remainingLockMs(record) },
-      { status: 429 }
-    );
-  }
-
-  // 3. Parse + validate body
-  let body: unknown;
-  try { body = await req.json(); }
-  catch { return ApiErrors.validation({ message: "Invalid JSON" }); }
-
-  const parsed = adminPinSchema.safeParse(body);
-  if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
-
-  const { pin, recaptchaToken } = parsed.data;
-
-  // 4. Require reCAPTCHA after threshold
-  if (record.count >= ADMIN_PIN_CONFIG.recaptchaThreshold) {
-    if (!recaptchaToken) {
+    // 2. Check lockout
+    const record = await getAttempts(userId);
+    if (isLockedOut(record)) {
       return NextResponse.json(
-        { success: false, requireRecaptcha: true, attempts: record.count },
-        { status: 400 }
+        { success: false, locked: true, remainingMs: remainingLockMs(record) },
+        { status: 429 }
       );
     }
-    const valid = await verifyRecaptcha(recaptchaToken);
-    if (!valid) {
+
+    // 3. Parse + validate body
+    let body: unknown;
+    try { body = await req.json(); }
+    catch { return ApiErrors.validation({ message: "Invalid JSON" }); }
+
+    const parsed = adminPinSchema.safeParse(body);
+    if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
+
+    const { pin, recaptchaToken } = parsed.data;
+
+    // 4. Require reCAPTCHA after threshold
+    if (record.count >= ADMIN_PIN_CONFIG.recaptchaThreshold) {
+      if (!recaptchaToken) {
+        return NextResponse.json(
+          { success: false, requireRecaptcha: true, attempts: record.count },
+          { status: 400 }
+        );
+      }
+      const valid = await verifyRecaptcha(recaptchaToken);
+      if (!valid) {
+        return NextResponse.json(
+          { success: false, error: "reCAPTCHA inválido. Inténtalo de nuevo." },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 5. Validate PIN — constant-time safe (both strings same type, Zod already validated length)
+    const adminPin = process.env.ADMIN_PIN;
+    if (!adminPin) {
       return NextResponse.json(
-        { success: false, error: "reCAPTCHA inválido. Inténtalo de nuevo." },
-        { status: 400 }
+        { success: false, error: "Falla Crítica: La variable ADMIN_PIN está vacía en Vercel." },
+        { status: 500 }
       );
     }
-  }
 
-  // 5. Validate PIN — constant-time safe (both strings same type, Zod already validated length)
-  const adminPin = process.env.ADMIN_PIN;
-  if (!adminPin) {
+    if (pin !== adminPin) {
+      const updated    = await recordFailure(userId);
+      const nowLocked  = isLockedOut(updated);
+      return NextResponse.json(
+        {
+          success:          false,
+          locked:           nowLocked,
+          remainingMs:      nowLocked ? remainingLockMs(updated) : 0,
+          attempts:         updated.count,
+          attemptsLeft:     ADMIN_PIN_CONFIG.maxAttempts - updated.count,
+          requireRecaptcha: updated.count >= ADMIN_PIN_CONFIG.recaptchaThreshold,
+        },
+        { status: 401 }
+      );
+    }
+
+    // 6. PIN correct — issue signed cookie
+    await clearAttempts(userId);
+    const token = await createAdminToken(userId, cookieSecret());
+
+    const response = NextResponse.json({ success: true, data: { ok: true } });
+    response.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge:   COOKIE_MAX_AGE,
+      path:     "/admin",
+    });
+    return response;
+
+  } catch (error: any) {
+    // THIS CATCHES THE INVISIBLE CRASH
     return NextResponse.json(
-      { success: false, error: "Falla Crítica: La variable ADMIN_PIN está vacía en Vercel." },
+      { success: false, error: "CRASH REAL EN EL SERVIDOR: " + error?.message },
       { status: 500 }
     );
   }
-
-  if (pin !== adminPin) {
-    const updated    = await recordFailure(userId);
-    const nowLocked  = isLockedOut(updated);
-    return NextResponse.json(
-      {
-        success:          false,
-        locked:           nowLocked,
-        remainingMs:      nowLocked ? remainingLockMs(updated) : 0,
-        attempts:         updated.count,
-        attemptsLeft:     ADMIN_PIN_CONFIG.maxAttempts - updated.count,
-        requireRecaptcha: updated.count >= ADMIN_PIN_CONFIG.recaptchaThreshold,
-      },
-      { status: 401 }
-    );
-  }
-
-  // 6. PIN correct — issue signed cookie
-  await clearAttempts(userId);
-  const token = await createAdminToken(userId, cookieSecret());
-
-  const response = NextResponse.json({ success: true, data: { ok: true } });
-  response.cookies.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure:   process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge:   COOKIE_MAX_AGE,
-    path:     "/admin",
-  });
-  return response;
 }

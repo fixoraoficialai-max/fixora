@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Users, Zap, Download, RefreshCw, Film, CheckCircle, Grid, Play } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
@@ -49,6 +50,8 @@ async function checkMultiCloneStatus(jobId: string, requestId: string) {
 // ─── Page Component ──────────────────────────────────────────────────────────
 
 export default function MultiClonePage() {
+  const t = useTranslations("create");
+
   const [characters, setCharacters] = useState<UploadState[]>([EMPTY_UPLOAD, EMPTY_UPLOAD, EMPTY_UPLOAD, EMPTY_UPLOAD]);
   const [motion, setMotion] = useState<UploadState>(EMPTY_UPLOAD);
   const [prompt, setPrompt] = useState("");
@@ -125,7 +128,7 @@ export default function MultiClonePage() {
 
     async function poll() {
       if (pollCountRef.current >= MAX_POLLS) {
-        setError("La generación está tomando más de lo esperado. Revisa tu historial en unos minutos.");
+        setError(t("generationTimeout"));
         setPhase("error");
         return;
       }
@@ -197,10 +200,7 @@ export default function MultiClonePage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TopBar
-        title="Multi-Avatar"
-        description="Intercambia 4 personajes siguiendo el mismo movimiento (5s cada uno)"
-      />
+      <TopBar title={t("multiTitle")} description={t("multiDesc")} />
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="max-w-5xl mx-auto pb-8">
           <div className="flex flex-col gap-8">
@@ -217,16 +217,16 @@ export default function MultiClonePage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold">Tus 4 Personajes (Secuencia 0-20s)</h2>
+              <h2 className="text-sm font-semibold">{t("multiCharsLabel")}</h2>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {characters.map((char, i) => (
                 <UploadCard
                   key={i}
-                  label={`Personaje ${i+1}`}
+                  label={t("multiChar", { n: i + 1 })}
                   hint={i === 0 ? "0-5s" : i === 1 ? "5-10s" : i === 2 ? "10-15s" : "15-20s"}
                   icon={<div className="text-[10px] bg-primary/20 text-primary h-5 w-5 rounded-full flex items-center justify-center font-bold">{i+1}</div>}
-                  dropLabel="Cargar imagen"
+                  dropLabel={t("multiLoadImage")}
                   state={char}
                   accept="image/*,.heic,.heif"
                   inputRef={charInputRefs[i] as React.RefObject<HTMLInputElement | null>}
@@ -247,10 +247,10 @@ export default function MultiClonePage() {
           {/* ── Right: Motion & Prompt ── */}
           <div className="flex flex-col gap-6">
             <UploadCard
-              label="Video de Movimiento"
-              hint="El video que todos clonarán"
+              label={t("multiMotionLabel")}
+              hint={t("multiMotionHint")}
               icon={<Film className="h-4 w-4 text-primary" />}
-              dropLabel="Subir video de referencia"
+              dropLabel={t("multiMotionDrop")}
               state={motion}
               accept="video/*"
               inputRef={motionInputRef}
@@ -264,9 +264,9 @@ export default function MultiClonePage() {
             />
 
             <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
-              <FormField label="Instrucción creativa" required>
+              <FormField label={t("multiPromptLabel")} required>
                 <Textarea
-                  placeholder="Personajes realizando los movimientos de forma fluida..."
+                  placeholder={t("multiPromptPlaceholder")}
                   rows={3}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -276,17 +276,17 @@ export default function MultiClonePage() {
 
               <div className="flex items-center justify-between pt-3 border-t border-border">
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Costo Total</span>
-                  <span className="text-warning font-bold text-lg">40 créditos</span>
+                  <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold">{t("multiCostLabel")}</span>
+                  <span className="text-warning font-bold text-lg">{t("multiCost")}</span>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="secondary" onClick={reset} disabled={phase !== "idle"}>
                     <RefreshCw className="h-4 w-4" />
-                    Reset
+                    {t("multiReset")}
                   </Button>
                   <Button onClick={handleGenerate} disabled={!canGenerate} isLoading={phase !== "idle" && phase !== "done"}>
                     <Play className="h-4 w-4" />
-                    Generar Multi-Avatar
+                    {t("multiGenerate")}
                   </Button>
                 </div>
               </div>
@@ -304,8 +304,7 @@ export default function MultiClonePage() {
             <div className="flex flex-col gap-1">
               <h3 className="text-lg font-bold text-text-primary">{statusMsg}</h3>
               <p className="text-sm text-text-muted max-w-md">
-                Estamos procesando los 4 personajes simultáneamente. Esto suele tomar entre 4 y 8 minutos. 
-                Los créditos se cobrarán solo por las partes que finalicen con éxito.
+                {t("multiProcessingMsg")}
               </p>
             </div>
           </div>
@@ -317,15 +316,15 @@ export default function MultiClonePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <CheckCircle className="text-success h-6 w-6" />
-                ¡Multi-Avatar Listo!
+                {t("multiDone")}
               </h2>
-              <Button onClick={reset} variant="secondary" size="sm">Nuevo Proyecto</Button>
+              <Button onClick={reset} variant="secondary" size="sm">{t("multiNewProject")}</Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {resultParts.map((part, idx) => (
                 <div key={part.id} className="rounded-xl border border-border bg-surface overflow-hidden group">
                   <div className="bg-surface-elevated px-4 py-2 border-b border-border flex justify-between items-center">
-                    <span className="text-xs font-bold text-primary">PARTE {idx + 1} ({idx * 5}-{(idx + 1) * 5}s)</span>
+                    <span className="text-xs font-bold text-primary">{t("multiPart", { n: idx + 1, from: idx * 5, to: (idx + 1) * 5 })}</span>
                     <a href={`/api/download?url=${encodeURIComponent(part.url)}&type=video`} download className="text-text-muted hover:text-primary transition-colors">
                       <Download className="h-4 w-4" />
                     </a>

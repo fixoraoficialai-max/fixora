@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Users, Zap, Download, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
@@ -83,24 +84,26 @@ async function checkCloneStatus(
 
 // ─── Validation (client-side pre-check — server does the real conversion) ────
 
-function validateImageFile(file: File): string | null {
+function validateImageFile(file: File, tCloneErrorImageType: string, tCloneErrorImageSize: string): string | null {
   const name = file.name.toLowerCase();
   const isHeic = name.endsWith(".heic") || name.endsWith(".heif");
   const isImage = file.type.startsWith("image/") || isHeic;
-  if (!isImage) return "Solo se permiten imágenes (JPG, PNG, WebP, HEIC)";
-  if (file.size > MAX_IMAGE_BYTES) return "La imagen es demasiado grande (máx 30MB)";
+  if (!isImage) return tCloneErrorImageType;
+  if (file.size > MAX_IMAGE_BYTES) return tCloneErrorImageSize;
   return null;
 }
 
-function validateVideoFile(file: File): string | null {
-  if (!file.type.startsWith("video/")) return "Solo se permiten videos (MP4, MOV, WebM)";
-  if (file.size > MAX_VIDEO_BYTES) return "El video es demasiado grande (máx 50MB)";
+function validateVideoFile(file: File, tCloneErrorVideoType: string, tCloneErrorVideoSize: string): string | null {
+  if (!file.type.startsWith("video/")) return tCloneErrorVideoType;
+  if (file.size > MAX_VIDEO_BYTES) return tCloneErrorVideoSize;
   return null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ClonePage() {
+  const t = useTranslations("create");
+
   const [character, setCharacter] = useState<UploadState>(EMPTY_UPLOAD);
   const [motion, setMotion] = useState<UploadState>(EMPTY_UPLOAD);
   const [prompt, setPrompt] = useState("");
@@ -121,28 +124,26 @@ export default function ClonePage() {
   // ─── Upload handlers ────────────────────────────────────────────────────────
 
   async function handleCharacterFile(file: File) {
-    const err = validateImageFile(file);
+    const err = validateImageFile(file, t("cloneErrorImageType"), t("cloneErrorImageSize"));
     if (err) { setError(err); return; }
     setError("");
 
-    // For HEIC: no browser preview possible — show a "file ready" placeholder instead
     const isHeic = file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif");
     const preview = isHeic ? "__heic__" : URL.createObjectURL(file);
 
     setCharacter({ url: "", preview, uploading: true, fileName: file.name });
     try {
-      // Server handles HEIC→JPEG conversion + downscaling transparently
       const url = await uploadToServer(file);
       setCharacter({ url, preview, uploading: false, fileName: file.name });
     } catch (e) {
       if (preview !== "__heic__") URL.revokeObjectURL(preview);
-      setError(e instanceof Error ? e.message : "Error subiendo imagen");
+      setError(e instanceof Error ? e.message : t("cloneErrorUploadImg"));
       setCharacter(EMPTY_UPLOAD);
     }
   }
 
   async function handleMotionFile(file: File) {
-    const err = validateVideoFile(file);
+    const err = validateVideoFile(file, t("cloneErrorVideoType"), t("cloneErrorVideoSize"));
     if (err) { setError(err); return; }
     setError("");
     const preview = URL.createObjectURL(file);
@@ -152,7 +153,7 @@ export default function ClonePage() {
       setMotion({ url, preview, uploading: false, fileName: file.name });
     } catch (e) {
       URL.revokeObjectURL(preview);
-      setError(e instanceof Error ? e.message : "Error subiendo video");
+      setError(e instanceof Error ? e.message : t("cloneErrorUploadVid"));
       setMotion(EMPTY_UPLOAD);
     }
   }
@@ -165,10 +166,7 @@ export default function ClonePage() {
 
     async function poll() {
       if (pollCountRef.current >= MAX_POLLS) {
-        setError(
-          "La generación está tomando más de lo esperado. " +
-          "Puedes cerrar esta página — el video aparecerá en tu Historial automáticamente."
-        );
+        setError(t("generationTimeout"));
         setPhase("error");
         return;
       }
@@ -187,14 +185,14 @@ export default function ClonePage() {
         }
 
         if (result.status === "FAILED") {
-          setError(result.reason ?? "No se pudo generar el video. No se descontaron créditos.");
+          setError(result.reason ?? t("cloneErrorFailed"));
           setPhase("error");
           return;
         }
 
         pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Error de conexión");
+        setError(e instanceof Error ? e.message : t("cloneErrorConn"));
         setPhase("error");
       }
     }
@@ -205,9 +203,9 @@ export default function ClonePage() {
   // ─── Generate ───────────────────────────────────────────────────────────────
 
   async function handleGenerate() {
-    if (!character.url) { setError("Sube la imagen del personaje"); return; }
-    if (!motion.url) { setError("Sube el video de movimiento"); return; }
-    if (prompt.trim().length < 5) { setError("Describe el resultado (mínimo 5 caracteres)"); return; }
+    if (!character.url) { setError(t("cloneErrorNoChar")); return; }
+    if (!motion.url) { setError(t("cloneErrorNoMotion")); return; }
+    if (prompt.trim().length < 5) { setError(t("cloneErrorNoPrompt")); return; }
 
     setPhase("submitted");
     setError("");
@@ -260,10 +258,7 @@ export default function ClonePage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TopBar
-        title="Avatar AI"
-        description="Anima tu personaje IA con el movimiento de un video real"
-      />
+      <TopBar title={t("cloneTitle")} description={t("cloneDesc")} />
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="mx-auto max-w-2xl">
           {error && (
@@ -279,8 +274,8 @@ export default function ClonePage() {
 
           {/* Character image — accepts HEIC, converted on server */}
           <UploadCard
-            label="Tu Personaje"
-            hint="Imagen del personaje a animar"
+            label={t("cloneCharLabel")}
+            hint={t("cloneCharHint")}
             icon={<Users className="h-4 w-4 text-primary-light" />}
             dropLabel={<>Sube imagen<br />del personaje<br /><span className="text-[10px] opacity-60">JPG, PNG, HEIC</span></>}
             state={character}
@@ -296,10 +291,9 @@ export default function ClonePage() {
             }}
           />
 
-          {/* Motion video */}
           <UploadCard
-            label="Video Movimiento"
-            hint="Video con el movimiento a aplicar al Avatar"
+            label={t("cloneMotionLabel")}
+            hint={t("cloneMotionHint")}
             icon={<Zap className="h-4 w-4 text-warning" />}
             dropLabel={<>Sube video<br />de movimiento<br /><span className="text-[10px] opacity-60">MP4, MOV, WebM</span></>}
             state={motion}
@@ -319,12 +313,12 @@ export default function ClonePage() {
         {/* ── Prompt & actions ── */}
         <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
           <FormField
-            label="Describe el resultado"
+            label={t("clonePromptLabel")}
             required
-            hint="Qué quieres que haga tu personaje con esos movimientos"
+            hint={t("clonePromptHint")}
           >
             <Textarea
-              placeholder="Mi personaje fresa bailando con energía, adoptando exactamente los movimientos del video…"
+              placeholder={t("clonePromptPlaceholder")}
               rows={3}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -332,19 +326,18 @@ export default function ClonePage() {
             />
           </FormField>
 
-
           <div className="flex items-center justify-between pt-1 border-t border-border">
             <p className="text-xs text-text-muted">
-              Costo: <span className="text-warning font-medium">10 créditos</span>
+              Costo: <span className="text-warning font-medium">{t("cloneCost")}</span>
             </p>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={reset} disabled={isProcessing}>
                 <RefreshCw className="h-4 w-4" />
-                Limpiar
+                {t("clear")}
               </Button>
               <Button onClick={handleGenerate} disabled={!canGenerate} isLoading={isProcessing}>
                 <Users className="h-4 w-4" />
-                {isProcessing ? statusMsg || "Procesando…" : "Generar Avatar AI"}
+                {isProcessing ? statusMsg || "Procesando…" : t("cloneGenerate")}
               </Button>
             </div>
           </div>
@@ -356,11 +349,10 @@ export default function ClonePage() {
             <Zap className="h-8 w-8 text-primary-light animate-pulse" />
             <p className="text-sm font-medium text-text-primary">{statusMsg}</p>
             <p className="text-xs text-text-muted text-center">
-              La generación suele tardar 3–6 minutos.<br />
-              Si cierras esta página, el video aparecerá en tu Historial cuando esté listo.
+              {t("generationWait")}
             </p>
             <p className="text-xs text-success">
-              Los créditos se descuentan solo al finalizar exitosamente.
+              {t("creditsOnSuccess")}
             </p>
           </div>
         )}
@@ -377,17 +369,17 @@ export default function ClonePage() {
               className="w-full"
             />
             <div className="flex items-center justify-between px-4 py-3 bg-surface-elevated border-t border-border">
-              <p className="text-xs text-success font-medium">Avatar AI generado exitosamente</p>
+              <p className="text-xs text-success font-medium">{t("cloneDone")}</p>
               <div className="flex gap-2">
                 <a href={`/api/download?url=${encodeURIComponent(videoUrl)}&type=video`} download>
                   <Button variant="secondary" size="sm">
                     <Download className="h-3.5 w-3.5" />
-                    Descargar
+                    {t("download")}
                   </Button>
                 </a>
                 <Button variant="secondary" size="sm" onClick={reset}>
                   <RefreshCw className="h-3.5 w-3.5" />
-                  Nuevo
+                  {t("newOne")}
                 </Button>
               </div>
             </div>

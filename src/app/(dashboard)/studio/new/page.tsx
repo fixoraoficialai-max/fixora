@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Film, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, FormField } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
@@ -57,19 +58,19 @@ async function createStudioProject(
 
 // ─── Validation (client-side pre-check) ──────────────────────────────────────
 
-function validateImageFile(file: File): string | null {
+function validateImageFile(file: File, tImageType: string, tImageSize: string): string | null {
   const name   = file.name.toLowerCase();
   const isHeic = name.endsWith(".heic") || name.endsWith(".heif");
-  if (!file.type.startsWith("image/") && !isHeic) {
-    return "Solo se permiten imágenes (JPG, PNG, WebP, HEIC)";
-  }
-  if (file.size > MAX_IMAGE_BYTES) return "La imagen es demasiado grande (máx 30MB)";
+  if (!file.type.startsWith("image/") && !isHeic) return tImageType;
+  if (file.size > MAX_IMAGE_BYTES) return tImageSize;
   return null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StudioNewPage() {
+  const t = useTranslations("studio");
+  const tCreate = useTranslations("create");
   const router = useRouter();
 
   const [character,         setCharacter]         = useState<UploadState>(EMPTY_UPLOAD);
@@ -83,7 +84,7 @@ export default function StudioNewPage() {
   // ─── Character upload ────────────────────────────────────────────────────────
 
   async function handleCharacterFile(file: File): Promise<void> {
-    const err = validateImageFile(file);
+    const err = validateImageFile(file, tCreate("cloneErrorImageType"), tCreate("cloneErrorImageSize"));
     if (err) { setError(err); return; }
 
     const preview = URL.createObjectURL(file);
@@ -134,10 +135,7 @@ export default function StudioNewPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TopBar
-        title="Nueva Serie"
-        description="Define tu personaje y el nombre de tu mini película"
-      />
+      <TopBar title={t("newTitle")} description={t("newDesc")} />
 
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="mx-auto max-w-xl flex flex-col gap-5">
@@ -152,14 +150,14 @@ export default function StudioNewPage() {
           <div>
             <p className="text-sm font-medium text-text-primary mb-2 flex items-center gap-2">
               <Users className="h-4 w-4 text-primary-light" />
-              Personaje principal
+              {t("charMainTitle")}
             </p>
             <p className="text-xs text-text-muted mb-3">
-              Esta imagen se usará como referencia visual en <strong>todas</strong> las escenas para mantener la consistencia del personaje.
+              {t("charMainDesc")}
             </p>
             <UploadCard
-              label="Personaje"
-              hint="Imagen del personaje que aparecerá en todas las escenas"
+              label={t("charUploadLabel")}
+              hint={t("charUploadHint")}
               icon={<Users className="h-4 w-4 text-primary-light" />}
               dropLabel={<>Sube imagen<br />del personaje<br /><span className="text-[10px] opacity-60">JPG, PNG, HEIC</span></>}
               state={character}
@@ -180,12 +178,12 @@ export default function StudioNewPage() {
           <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
             <div className="flex items-center gap-2 border-b border-border pb-3">
               <Film className="h-4 w-4 text-primary-light" />
-              <span className="text-sm font-semibold text-text-primary">Detalles de la serie</span>
+              <span className="text-sm font-semibold text-text-primary">{t("seriesDetailsTitle")}</span>
             </div>
 
-            <FormField label="Nombre de la serie" required hint="Ej: Aventuras de Luna, Mi Historia en París...">
+            <FormField label={t("seriesNameLabel")} required hint={t("seriesNameHint")}>
               <Input
-                placeholder="Escribe el nombre de tu serie..."
+                placeholder={t("seriesNamePlaceholder")}
                 value={seriesName}
                 onChange={(e) => setSeriesName(e.target.value)}
                 disabled={submitting}
@@ -193,9 +191,9 @@ export default function StudioNewPage() {
               />
             </FormField>
 
-            <FormField label="Descripción de la historia" hint="Opcional — contexto general de tu mini película">
+            <FormField label={t("seriesDescLabel")} hint={t("seriesDescHint")}>
               <Textarea
-                placeholder="Escribe una breve descripción de la historia (opcional)..."
+                placeholder={t("seriesDescPlaceholder")}
                 rows={3}
                 value={storyDescription}
                 onChange={(e) => setStoryDescription(e.target.value)}
@@ -206,7 +204,7 @@ export default function StudioNewPage() {
             <div className="pt-1 border-t border-border flex justify-end">
               <Button onClick={handleCreate} disabled={!canCreate} isLoading={submitting}>
                 <Film className="h-4 w-4" />
-                {submitting ? "Creando serie…" : "Crear Serie"}
+                {submitting ? t("creating") : t("createSeries")}
               </Button>
             </div>
           </div>

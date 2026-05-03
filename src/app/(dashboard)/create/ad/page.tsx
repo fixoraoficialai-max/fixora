@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Megaphone, Users, Package, Download, RefreshCw, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, FormField } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
@@ -19,11 +20,7 @@ const MAX_IMAGE_BYTES  = 30 * 1024 * 1024; // 30 MB
 const POLL_INTERVAL_MS = 10_000;
 const MAX_POLLS        = 60;
 
-const STYLE_LABELS: Record<AdStyle, { label: string; description: string }> = {
-  elegant:    { label: "Elegante",    description: "Lujo y sofisticación" },
-  dynamic:    { label: "Dinámico",    description: "Energía y movimiento" },
-  minimalist: { label: "Minimalista", description: "Limpio y profesional" },
-};
+// STYLE_LABELS is built dynamically from translations in the component
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,19 +85,25 @@ async function checkAdStatus(
 
 // ─── Client-side pre-validation (server does the real validation) ─────────────
 
-function validateImageFile(file: File): string | null {
+function validateImageFile(file: File, tImageType: string, tImageSize: string): string | null {
   const name   = file.name.toLowerCase();
   const isHeic = name.endsWith(".heic") || name.endsWith(".heif");
-  if (!file.type.startsWith("image/") && !isHeic) {
-    return "Solo se permiten imágenes (JPG, PNG, WebP, HEIC)";
-  }
-  if (file.size > MAX_IMAGE_BYTES) return "La imagen es demasiado grande (máx 30MB)";
+  if (!file.type.startsWith("image/") && !isHeic) return tImageType;
+  if (file.size > MAX_IMAGE_BYTES) return tImageSize;
   return null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdCreatorPage() {
+  const t = useTranslations("create");
+
+  const styleLabels: Record<AdStyle, { label: string; description: string }> = {
+    elegant:    { label: t("adStyleElegant"),    description: t("adStyleElegantDesc") },
+    dynamic:    { label: t("adStyleDynamic"),    description: t("adStyleDynamicDesc") },
+    minimalist: { label: t("adStyleMinimalist"), description: t("adStyleMinimalistDesc") },
+  };
+
   const [character,    setCharacter]    = useState<UploadState>(EMPTY_UPLOAD);
   const [product,      setProduct]      = useState<UploadState>(EMPTY_UPLOAD);
   const [productName,  setProductName]  = useState("");
@@ -122,7 +125,7 @@ export default function AdCreatorPage() {
     setter:  (s: UploadState) => void,
     label:   string,
   ): Promise<void> {
-    const err = validateImageFile(file);
+    const err = validateImageFile(file, t("adErrorImageType"), t("adErrorImageSize"));
     if (err) { setError(err); return; }
 
     const preview = URL.createObjectURL(file);
@@ -161,7 +164,7 @@ export default function AdCreatorPage() {
       if (pollCountRef.current > MAX_POLLS) {
         clearPollTimer();
         setPhase("error");
-        setError("La generación tardó demasiado. Revisa tu Historial en unos minutos.");
+        setError(t("adErrorTimeout"));
         return;
       }
 
@@ -176,7 +179,7 @@ export default function AdCreatorPage() {
         } else if (result.status === "FAILED") {
           clearPollTimer();
           setPhase("error");
-          setError("La generación falló. Tus créditos serán devueltos.");
+          setError(t("adErrorFailed"));
         }
       } catch {
         // Transient network error — keep polling
@@ -187,9 +190,9 @@ export default function AdCreatorPage() {
   // ─── Generate ────────────────────────────────────────────────────────────────
 
   async function handleGenerate(): Promise<void> {
-    if (!character.url) { setError("Sube la imagen del personaje");       return; }
-    if (!product.url)   { setError("Sube la imagen del producto");        return; }
-    if (productName.trim().length < 2) { setError("Escribe el nombre del producto"); return; }
+    if (!character.url) { setError(t("adErrorNoChar"));    return; }
+    if (!product.url)   { setError(t("adErrorNoProduct")); return; }
+    if (productName.trim().length < 2) { setError(t("adErrorNoName")); return; }
 
     setPhase("submitted");
     setError("");
@@ -244,10 +247,7 @@ export default function AdCreatorPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TopBar
-        title="Ad Creator"
-        description="Crea un video publicitario con tu personaje y producto"
-      />
+      <TopBar title={t("adTitle")} description={t("adDesc")} />
 
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="mx-auto max-w-2xl">
@@ -266,8 +266,8 @@ export default function AdCreatorPage() {
 
               {/* Character image */}
               <UploadCard
-                label="Tu Personaje"
-                hint="Imagen de la persona que promocionará el producto"
+                label={t("adCharLabel")}
+                hint={t("adCharHint")}
                 icon={<Users className="h-4 w-4 text-primary-light" />}
                 dropLabel={<>Sube imagen<br />del personaje<br /><span className="text-[10px] opacity-60">JPG, PNG, HEIC</span></>}
                 state={character}
@@ -283,10 +283,9 @@ export default function AdCreatorPage() {
                 }}
               />
 
-              {/* Product image */}
               <UploadCard
-                label="Tu Producto"
-                hint="Imagen del producto a promocionar"
+                label={t("adProductLabel")}
+                hint={t("adProductHint")}
                 icon={<Package className="h-4 w-4 text-warning" />}
                 dropLabel={<>Sube imagen<br />del producto<br /><span className="text-[10px] opacity-60">JPG, PNG, HEIC</span></>}
                 state={product}
@@ -307,12 +306,12 @@ export default function AdCreatorPage() {
             <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
 
               <FormField
-                label="Nombre del producto"
+                label={t("adProductNameLabel")}
                 required
-                hint="Ej: Perfume Noir, Zapatillas Air Max, Crema Facial..."
+                hint={t("adProductNameHint")}
               >
                 <Input
-                  placeholder="Escribe el nombre del producto..."
+                  placeholder={t("adProductNamePlaceholder")}
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
                   disabled={isProcessing}
@@ -320,10 +319,9 @@ export default function AdCreatorPage() {
                 />
               </FormField>
 
-              {/* Style selector */}
               <div>
                 <p className="text-sm font-medium text-text-primary mb-2">
-                  Estilo del anuncio
+                  {t("adStyleLabel")}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {AD_STYLES.map((s) => (
@@ -339,26 +337,25 @@ export default function AdCreatorPage() {
                           : "border-border bg-surface-elevated text-text-muted hover:border-primary/40",
                       ].join(" ")}
                     >
-                      <p className="font-medium">{STYLE_LABELS[s].label}</p>
-                      <p className="text-[11px] opacity-70 mt-0.5">{STYLE_LABELS[s].description}</p>
+                      <p className="font-medium">{styleLabels[s].label}</p>
+                      <p className="text-[11px] opacity-70 mt-0.5">{styleLabels[s].description}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Actions row */}
               <div className="flex items-center justify-between pt-1 border-t border-border">
                 <p className="text-xs text-text-muted">
-                  Costo: <span className="text-warning font-medium">25 créditos</span>
+                  Costo: <span className="text-warning font-medium">{t("adCost")}</span>
                 </p>
                 <div className="flex gap-2">
                   <Button variant="secondary" onClick={reset} disabled={isProcessing}>
                     <RefreshCw className="h-4 w-4" />
-                    Limpiar
+                    {t("clear")}
                   </Button>
                   <Button onClick={handleGenerate} disabled={!canGenerate} isLoading={isProcessing}>
                     <Sparkles className="h-4 w-4" />
-                    {isProcessing ? statusMsg || "Procesando…" : "Crear Anuncio"}
+                    {isProcessing ? statusMsg || "Procesando…" : t("adGenerate")}
                   </Button>
                 </div>
               </div>
@@ -370,8 +367,7 @@ export default function AdCreatorPage() {
                 <Megaphone className="h-8 w-8 text-primary-light animate-pulse" />
                 <p className="text-sm font-medium text-text-primary">{statusMsg}</p>
                 <p className="text-xs text-text-muted text-center">
-                  La generación suele tardar 3–6 minutos.<br />
-                  Si cierras esta página, el video aparecerá en tu Historial cuando esté listo.
+                  {t("generationWait")}
                 </p>
               </div>
             )}
@@ -388,19 +384,17 @@ export default function AdCreatorPage() {
                   className="w-full"
                 />
                 <div className="flex items-center justify-between px-4 py-3 bg-surface-elevated border-t border-border">
-                  <p className="text-xs text-success font-medium">
-                    Video publicitario generado exitosamente
-                  </p>
+                  <p className="text-xs text-success font-medium">{t("adDone")}</p>
                   <div className="flex gap-2">
                     <a href={`/api/download?url=${encodeURIComponent(videoUrl)}&type=video`} download>
                       <Button variant="secondary" size="sm">
                         <Download className="h-3.5 w-3.5" />
-                        Descargar
+                        {t("download")}
                       </Button>
                     </a>
                     <Button variant="secondary" size="sm" onClick={reset}>
                       <RefreshCw className="h-3.5 w-3.5" />
-                      Nuevo
+                      {t("newOne")}
                     </Button>
                   </div>
                 </div>

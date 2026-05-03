@@ -58,11 +58,9 @@ export default async function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-text-muted" />
-              <CardTitle>Contáctanos</CardTitle>
+              <CardTitle>{t("contactTitle")}</CardTitle>
             </div>
-            <CardDescription>
-              Tu opinión nos ayuda a mejorar — te respondemos al email de tu cuenta
-            </CardDescription>
+            <CardDescription>{t("contactDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <FeedbackForm />

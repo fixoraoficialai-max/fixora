@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Video, Download, RefreshCw, Zap, X, Upload } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
@@ -16,16 +17,18 @@ const ASPECT_OPTIONS = [
   { value: "SQUARE" as AspectRatio, label: "1:1", desc: "Instagram" },
 ];
 
-const MOODS = [
-  { label: "Motivacional", emoji: "\u{1F4AA}", value: "motivational, epic, uplifting atmosphere" },
-  { label: "Triste", emoji: "\u{1F622}", value: "sad, melancholic, emotional atmosphere" },
-  { label: "Feliz", emoji: "\u{1F60A}", value: "happy, joyful, bright and cheerful atmosphere" },
-  { label: "Epico", emoji: "\u26A1", value: "epic, dramatic, powerful cinematic atmosphere" },
-  { label: "Gracioso", emoji: "\u{1F602}", value: "funny, playful, lighthearted atmosphere" },
-  { label: "Dramatico", emoji: "\u{1F3AD}", value: "dramatic, intense, dark atmosphere" },
+const MOOD_VALUES = [
+  { key: "moodMotivacional" as const, emoji: "\u{1F4AA}", value: "motivational, epic, uplifting atmosphere" },
+  { key: "moodTriste"       as const, emoji: "\u{1F622}", value: "sad, melancholic, emotional atmosphere" },
+  { key: "moodFeliz"        as const, emoji: "\u{1F60A}", value: "happy, joyful, bright and cheerful atmosphere" },
+  { key: "moodEpico"        as const, emoji: "⚡",    value: "epic, dramatic, powerful cinematic atmosphere" },
+  { key: "moodGracioso"     as const, emoji: "\u{1F602}", value: "funny, playful, lighthearted atmosphere" },
+  { key: "moodDramatico"    as const, emoji: "\u{1F3AD}", value: "dramatic, intense, dark atmosphere" },
 ];
 
 export default function QuickVideoPage() {
+  const t = useTranslations("create");
+
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imagePreview, setImagePreview] = useState("");
@@ -51,46 +54,29 @@ export default function QuickVideoPage() {
   }, []);
 
   async function handleFileUpload(file: File) {
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) { setError("Solo se permiten imagenes o videos"); return; }
-    if (file.size > 50 * 1024 * 1024) { setError("El archivo debe ser menor a 50MB"); return; }
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setError(t("videoErrorType"));
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) { setError(t("videoErrorSize")); return; }
     setError("");
     const isVid = file.type.startsWith("video/");
     setIsVideo(isVid);
     const preview = URL.createObjectURL(file);
     setImagePreview(preview);
-
-    if (isVid) {
-      // For video - store as object URL for preview, upload for API
-      setIsUploading(true);
-      try {
-        const form = new FormData();
-        form.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: form });
-        const data = await res.json() as { success: boolean; data?: { imageUrl: string }; error?: { message: string } };
-        if (!data.success) throw new Error(data.error?.message ?? "Error subiendo video");
-        setImageUrl(data.data?.imageUrl ?? "");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error subiendo video");
-        setImagePreview("");
-      } finally {
-        setIsUploading(false);
-      }
-    } else {
-      // For image - upload normally
-      setIsUploading(true);
-      try {
-        const form = new FormData();
-        form.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: form });
-        const data = await res.json() as { success: boolean; data?: { imageUrl: string }; error?: { message: string } };
-        if (!data.success) throw new Error(data.error?.message ?? "Error subiendo imagen");
-        setImageUrl(data.data?.imageUrl ?? "");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error subiendo imagen");
-        setImagePreview("");
-      } finally {
-        setIsUploading(false);
-      }
+    setIsUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json() as { success: boolean; data?: { imageUrl: string }; error?: { message: string } };
+      if (!data.success) throw new Error(data.error?.message ?? (isVid ? t("videoErrorUploadVid") : t("videoErrorUploadImg")));
+      setImageUrl(data.data?.imageUrl ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (isVid ? t("videoErrorUploadVid") : t("videoErrorUploadImg")));
+      setImagePreview("");
+    } finally {
+      setIsUploading(false);
     }
   }
 
@@ -102,11 +88,11 @@ export default function QuickVideoPage() {
 
   async function handleGenerate() {
     const trimmed = prompt.trim();
-    if (trimmed.length < 5) { setError("Escribe al menos 5 caracteres"); return; }
+    if (trimmed.length < 5) { setError(t("videoErrorMin")); return; }
     setIsLoading(true);
     setError("");
     setVideoUrl("");
-    const selectedMood = MOODS.find(m => m.value === mood);
+    const selectedMood = MOOD_VALUES.find(m => m.value === mood);
     const finalPrompt = selectedMood ? trimmed + ", " + selectedMood.value : trimmed;
     try {
       const res = await fetch("/api/generate/video", {
@@ -120,10 +106,10 @@ export default function QuickVideoPage() {
         }),
       });
       const data = await res.json() as { success: boolean; data?: { videoUrl: string }; error?: { message: string } };
-      if (!data.success) throw new Error(data.error?.message ?? "Error generando video");
+      if (!data.success) throw new Error(data.error?.message ?? t("videoErrorMin"));
       setVideoUrl(data.data?.videoUrl ?? "");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Algo salio mal");
+      setError(err instanceof Error ? err.message : t("videoErrorMin"));
     } finally {
       setIsLoading(false);
     }
@@ -143,29 +129,26 @@ export default function QuickVideoPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TopBar
-        title="Generar Video"
-        description="Genera un video desde texto o a partir de una imagen"
-      />
+      <TopBar title={t("videoTitle")} description={t("videoDesc")} />
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="mx-auto max-w-2xl flex flex-col gap-5">
         <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
 
-          <FormField label="Imagen de referencia (opcional)" hint="Sube una imagen o pega una URL para convertirla en video">
+          <FormField label={t("videoRefLabel")} hint={t("videoRefHint")}>
             {imagePreview ? (
               <div className="relative rounded-xl overflow-hidden border border-border">
                 {isVideo ? (
-                <video src={imagePreview} className="w-full max-h-48 object-cover" controls playsInline preload="metadata" />
-              ) : (
-                <img src={imagePreview} alt="Preview" className="w-full max-h-48 object-cover" />
-              )}
+                  <video src={imagePreview} className="w-full max-h-48 object-cover" controls playsInline preload="metadata" />
+                ) : (
+                  <img src={imagePreview} alt="Preview" className="w-full max-h-48 object-cover" />
+                )}
                 <button type="button" onClick={handleClearImage}
                   className="absolute top-2 right-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 transition-colors">
                   <X className="h-4 w-4" />
                 </button>
                 {isUploading && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <p className="text-white text-sm">Subiendo...</p>
+                    <p className="text-white text-sm">{t("videoUploading")}</p>
                   </div>
                 )}
               </div>
@@ -175,14 +158,14 @@ export default function QuickVideoPage() {
                   onClick={() => fileInputRef.current?.click()}
                   className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-6 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all">
                   <Upload className="h-8 w-8 text-text-muted mb-2" />
-                  <p className="text-sm text-text-muted">Haz clic para subir imagen o video</p>
-                  <p className="text-xs text-text-muted mt-1">PNG, JPG, MP4 hasta 50MB</p>
+                  <p className="text-sm text-text-muted">{t("videoClickUpload")}</p>
+                  <p className="text-xs text-text-muted mt-1">{t("videoUploadFormat")}</p>
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/mov,video/webm" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }} />
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-text-muted">o pega una URL</span>
+                  <span className="text-xs text-text-muted">{t("videoOrPasteUrl")}</span>
                   <div className="flex-1 h-px bg-border" />
                 </div>
                 <input type="url" placeholder="https://..."
@@ -193,11 +176,11 @@ export default function QuickVideoPage() {
             )}
           </FormField>
 
-          <FormField label="Extender video existente (opcional)" hint="Pega la URL de un video generado para continuar la escena">
+          <FormField label={t("videoExtendLabel")} hint={t("videoExtendHint")}>
             <div className="flex items-center gap-2">
               <input
                 type="url"
-                placeholder="https://... URL del video a extender"
+                placeholder={t("videoExtendPlaceholder")}
                 value={extendVideoUrl}
                 onChange={(e) => setExtendVideoUrl(e.target.value)}
                 className="flex h-10 w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-base text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/60 transition-colors"
@@ -214,24 +197,24 @@ export default function QuickVideoPage() {
             )}
           </FormField>
 
-          <FormField label="Prompt" required hint="Describe el movimiento y accion del video">
+          <FormField label={t("videoPromptLabel")} required hint={t("videoPromptHint")}>
             <Textarea placeholder="The character walks confidently, cinematic slow motion..." rows={4}
               value={prompt} onChange={(e) => setPrompt(e.target.value)} />
           </FormField>
 
-          <FormField label="Mood del Video">
+          <FormField label={t("videoMoodLabel")}>
             <div className="grid grid-cols-3 gap-2">
-              {MOODS.map((m) => (
+              {MOOD_VALUES.map((m) => (
                 <button key={m.value} type="button" onClick={() => setMood(mood === m.value ? "" : m.value)}
                   className={cn("flex flex-col items-center rounded-xl border p-3 text-xs font-medium transition-all",
                     mood === m.value ? "border-primary/40 bg-primary/10 text-primary-light" : "border-border text-text-muted hover:border-border-strong")}>
-                  <span className="text-2xl mb-1">{m.emoji}</span>{m.label}
+                  <span className="text-2xl mb-1">{m.emoji}</span>{t(m.key)}
                 </button>
               ))}
             </div>
           </FormField>
 
-          <FormField label="Formato">
+          <FormField label={t("videoFormatLabel")}>
             <div className="flex gap-3">
               {ASPECT_OPTIONS.map((opt) => (
                 <button key={opt.value} type="button" onClick={() => setAspectRatio(opt.value)}
@@ -244,13 +227,13 @@ export default function QuickVideoPage() {
             </div>
           </FormField>
 
-          <FormField label="Duracion">
+          <FormField label={t("videoDurationLabel")}>
             <div className="flex gap-3">
               {(["5", "10"] as Duration[]).map((d) => (
                 <button key={d} type="button" onClick={() => setDuration(d)}
                   className={cn("flex-1 rounded-xl border px-4 py-3 text-sm font-medium transition-all",
                     duration === d ? "border-primary/40 bg-primary/10 text-primary-light" : "border-border text-text-muted hover:border-border-strong")}>
-                  {d} segundos
+                  {t("videoSeconds", { n: d })}
                 </button>
               ))}
             </div>
@@ -259,10 +242,10 @@ export default function QuickVideoPage() {
           {error && <p className="text-sm text-danger">{error}</p>}
 
           <div className="flex items-center justify-between pt-1 border-t border-border">
-            <p className="text-xs text-text-muted">Costo: <span className="text-warning font-medium">5 creditos</span></p>
+            <p className="text-xs text-text-muted">Costo: <span className="text-warning font-medium">{t("videoCost")}</span></p>
             <Button onClick={handleGenerate} disabled={prompt.trim().length < 5 || isLoading || isUploading} isLoading={isLoading}>
               <Video className="h-4 w-4" />
-              {isLoading ? "Generando video..." : "Generar Video"}
+              {isLoading ? t("videoGenerating") : t("videoGenerate")}
             </Button>
           </div>
         </div>
@@ -270,8 +253,8 @@ export default function QuickVideoPage() {
         {isLoading && (
           <div className="rounded-xl border border-border bg-surface p-6 flex flex-col items-center gap-3">
             <Zap className="h-8 w-8 text-primary-light animate-pulse" />
-            <p className="text-sm font-medium text-text-primary">Generando tu video...</p>
-            <p className="text-xs text-text-muted">Esto puede tardar 1-2 minutos</p>
+            <p className="text-sm font-medium text-text-primary">{t("videoGenWait")}</p>
+            <p className="text-xs text-text-muted">{t("videoGenWaitSub")}</p>
           </div>
         )}
 
@@ -279,15 +262,15 @@ export default function QuickVideoPage() {
           <div className="rounded-xl border border-border overflow-hidden">
             <video src={"/api/download?url=" + encodeURIComponent(videoUrl) + "&type=video&stream=1"} controls autoPlay loop playsInline className="w-full" />
             <div className="flex items-center justify-between px-4 py-3 bg-surface-elevated border-t border-border">
-              <p className="text-xs text-success font-medium">Video generado</p>
+              <p className="text-xs text-success font-medium">{t("videoGenerated")}</p>
               <div className="flex gap-2">
                 <a href={"/api/download?url=" + encodeURIComponent(videoUrl) + "&type=video"} download>
                   <Button variant="secondary" size="sm">
-                    <Download className="h-3.5 w-3.5" />Descargar
+                    <Download className="h-3.5 w-3.5" />{t("download")}
                   </Button>
                 </a>
                 <Button variant="secondary" size="sm" onClick={handleReset}>
-                  <RefreshCw className="h-3.5 w-3.5" />Nuevo
+                  <RefreshCw className="h-3.5 w-3.5" />{t("newOne")}
                 </Button>
               </div>
             </div>

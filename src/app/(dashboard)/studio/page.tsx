@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus, Film, Clapperboard } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -28,31 +29,34 @@ export default async function StudioPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const projects = await db.project.findMany({
-    where: { userId: session.user.id, platform: "studio" },
-    orderBy: { updatedAt: "desc" },
-    take: 50,
-    select: {
-      id:          true,
-      name:        true,
-      description: true,
-      status:      true,
-      createdAt:   true,
-      updatedAt:   true,
-      _count: { select: { scenes: true, videos: true } },
-    },
-  });
+  const [projects, t] = await Promise.all([
+    db.project.findMany({
+      where: { userId: session.user.id, platform: "studio" },
+      orderBy: { updatedAt: "desc" },
+      take: 50,
+      select: {
+        id:          true,
+        name:        true,
+        description: true,
+        status:      true,
+        createdAt:   true,
+        updatedAt:   true,
+        _count: { select: { scenes: true, videos: true } },
+      },
+    }),
+    getTranslations("studio"),
+  ]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <TopBar
-        title="Studio"
-        description="Crea mini películas con personajes consistentes"
+        title={t("title")}
+        description={t("desc")}
         actions={
           <Button size="sm" asChild>
             <Link href="/studio/new">
               <Plus className="h-4 w-4" />
-              Nueva Serie
+              {t("newSeries")}
             </Link>
           </Button>
         }
@@ -65,15 +69,15 @@ export default async function StudioPage() {
             <div className="rounded-2xl border border-border bg-surface p-8 max-w-sm">
               <Clapperboard className="h-12 w-12 text-text-muted mx-auto mb-4" />
               <h2 className="text-lg font-semibold text-text-primary mb-2">
-                Sin series aún
+                {t("emptyTitle")}
               </h2>
               <p className="text-sm text-text-muted mb-6">
-                Crea tu primera mini película con personajes consistentes en cada escena.
+                {t("emptyDesc")}
               </p>
               <Button asChild className="w-full">
                 <Link href="/studio/new">
                   <Plus className="h-4 w-4" />
-                  Crear primera serie
+                  {t("createFirst")}
                 </Link>
               </Button>
             </div>
@@ -90,11 +94,10 @@ export default async function StudioPage() {
                   className="group rounded-xl border border-border bg-surface p-5 hover:border-primary/40 hover:bg-surface-elevated transition-colors"
                 >
                   <div className="flex items-start gap-4">
-                    {/* Character thumbnail */}
                     {characterUrl ? (
                       <img
                         src={characterUrl}
-                        alt="Personaje"
+                        alt={t("characterAlt")}
                         className="h-14 w-14 rounded-lg object-cover flex-shrink-0 border border-border"
                       />
                     ) : (
@@ -108,9 +111,9 @@ export default async function StudioPage() {
                         {project.name}
                       </h3>
                       <p className="text-xs text-text-muted mt-1">
-                        {project._count.scenes} escena{project._count.scenes !== 1 ? "s" : ""}
+                        {t("scenesCount", { n: project._count.scenes })}
                         {" · "}
-                        {project._count.videos} video{project._count.videos !== 1 ? "s" : ""} generados
+                        {t("videosGenerated", { n: project._count.videos })}
                       </p>
                       <p className="text-[11px] text-text-muted mt-2">
                         {formatRelativeTime(project.updatedAt)}
@@ -127,7 +130,7 @@ export default async function StudioPage() {
               className="rounded-xl border border-dashed border-border bg-surface p-5 hover:border-primary/40 hover:bg-surface-elevated transition-colors flex items-center justify-center gap-3 text-text-muted hover:text-primary-light"
             >
               <Plus className="h-5 w-5" />
-              <span className="text-sm font-medium">Nueva Serie</span>
+              <span className="text-sm font-medium">{t("newSeries")}</span>
             </Link>
           </div>
         )}

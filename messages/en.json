@@ -358,6 +358,7 @@
     "promptErrorFormat": "Unsupported format. Use PNG, JPG, WEBP, or GIF.",
     "promptErrorSize": "Image cannot exceed 4MB.",
     "promptErrorMin": "Write at least 5 characters",
+    "promptNetworkError": "Connection error. Please try again.",
 
     "cloneTitle": "Avatar AI",
     "cloneDesc": "Animate your AI character with the movement from a real video",

@@ -104,58 +104,71 @@ function buildMessageContent(
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return ApiErrors.unauthorized();
+  let userId: string | undefined;
 
-  if (!(await checkRateLimit(`prompt:${session.user.id}`, RATE_LIMITS.prompt))) {
-    return ApiErrors.tooManyRequests();
-  }
-
-  let body: unknown;
   try {
-    body = await req.json();
-  } catch {
-    return ApiErrors.validation({ message: "Cuerpo JSON inválido" });
-  }
+    const session = await auth();
+    if (!session?.user?.id) return ApiErrors.unauthorized();
+    userId = session.user.id;
 
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
+    if (!(await checkRateLimit(`prompt:${userId}`, RATE_LIMITS.prompt))) {
+      return ApiErrors.tooManyRequests();
+    }
 
-  const { prompt, style, tone, aspectRatio, imageBase64, imageMediaType } = parsed.data;
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return ApiErrors.validation({ message: "Cuerpo JSON inválido" });
+    }
 
-  const reserved = await reserveCredits(session.user.id, PROMPT_CREDIT_COST);
-  if (!reserved) return ApiErrors.insufficientCredits();
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
 
-  const context = buildContext(style, tone, aspectRatio);
-  const content = buildMessageContent(prompt, context, imageBase64, imageMediaType);
+    const { prompt, style, tone, aspectRatio, imageBase64, imageMediaType } = parsed.data;
 
-  const systemPrompt = [
-    "You are an expert AI video and image prompt engineer.",
-    imageBase64
-      ? "The user has provided a reference image. Analyze its visual style, composition, colors, lighting, and mood. Use these visual elements to make the prompt more precise and aligned with what the user wants."
-      : null,
-    "Transform the user's idea into a detailed cinematic prompt optimized for FLUX and Kling AI.",
-    "Write the prompt in English. Include: lighting style, composition, camera angle, atmosphere, and lens type.",
-    "Keep the result under 200 words.",
-    "Return ONLY the optimized prompt — no explanations, no headers, no formatting.",
-  ].filter(Boolean).join(" ");
+    const reserved = await reserveCredits(userId, PROMPT_CREDIT_COST);
+    if (!reserved) return ApiErrors.insufficientCredits();
 
-  let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
-  try {
-    message = await anthropic.messages.create({
-      model:      MODEL,
-      max_tokens: 300,
-      system:     systemPrompt,
-      messages:   [{ role: "user", content }],
-    });
+    const context = buildContext(style, tone, aspectRatio);
+    const content = buildMessageContent(prompt, context, imageBase64, imageMediaType);
+
+    const systemPrompt = [
+      "You are an expert AI video and image prompt engineer.",
+      imageBase64
+        ? "The user has provided a reference image. Analyze its visual style, composition, colors, lighting, and mood. Use these visual elements to make the prompt more precise and aligned with what the user wants."
+        : null,
+      "Transform the user's idea into a detailed cinematic prompt optimized for FLUX and Kling AI.",
+      "Write the prompt in English. Include: lighting style, composition, camera angle, atmosphere, and lens type.",
+      "Keep the result under 200 words.",
+      "Return ONLY the optimized prompt — no explanations, no headers, no formatting.",
+    ].filter(Boolean).join(" ");
+
+    let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
+    try {
+      message = await anthropic.messages.create({
+        model:      MODEL,
+        max_tokens: 300,
+        system:     systemPrompt,
+        messages:   [{ role: "user", content }],
+      });
+    } catch (err) {
+      await releaseCredits(userId, PROMPT_CREDIT_COST);
+      console.error("[prompt/route] Anthropic API error:", err);
+      return ApiErrors.internal();
+    }
+
+    const block     = message.content[0];
+    const optimized = block?.type === "text" ? block.text.trim() : prompt;
+
+    return apiSuccess({ original: prompt, optimized });
+
   } catch (err) {
-    await releaseCredits(session.user.id, PROMPT_CREDIT_COST);
-    console.error("[prompt/route] Anthropic API error:", err);
+    // Safety net — any unhandled exception (DB down, cold-start crash, etc.)
+    // must never return an empty body. Always respond with JSON so the client
+    // can parse the error and show a proper message.
+    if (userId) await releaseCredits(userId, PROMPT_CREDIT_COST).catch(() => {});
+    console.error("[prompt/route] Unhandled error:", err);
     return ApiErrors.internal();
   }
-
-  const block     = message.content[0];
-  const optimized = block?.type === "text" ? block.text.trim() : prompt;
-
-  return apiSuccess({ original: prompt, optimized });
 }

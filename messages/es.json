@@ -358,6 +358,7 @@
     "promptErrorFormat": "Formato no soportado. Usa PNG, JPG, WEBP o GIF.",
     "promptErrorSize": "La imagen no puede superar 4MB.",
     "promptErrorMin": "Escribe al menos 5 caracteres",
+    "promptNetworkError": "Error de conexión. Inténtalo de nuevo.",
 
     "cloneTitle": "Avatar AI",
     "cloneDesc": "Anima tu personaje IA con el movimiento de un video real",

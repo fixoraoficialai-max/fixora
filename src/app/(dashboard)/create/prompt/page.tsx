@@ -105,16 +105,23 @@ export default function QuickPromptPage() {
     };
 
     try {
-      const res  = await fetch("/api/generate/prompt", {
+      const res = await fetch("/api/generate/prompt", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(payload),
       });
-      const data = await res.json() as { success: boolean; data?: { optimized: string }; error?: { message: string } };
-      if (!data.success) throw new Error(data.error?.message ?? t("promptErrorMin"));
+
+      let data: { success: boolean; data?: { optimized: string }; error?: { message: string } };
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(t("promptNetworkError"));
+      }
+
+      if (!data.success) throw new Error(data.error?.message ?? t("promptNetworkError"));
       setResult(data.data?.optimized ?? "");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("promptErrorMin"));
+      setError(err instanceof Error ? err.message : t("promptNetworkError"));
     } finally {
       setIsLoading(false);
     }

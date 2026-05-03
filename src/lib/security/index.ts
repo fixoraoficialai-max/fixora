@@ -209,6 +209,7 @@ export const RATE_LIMITS = {
   auth:           { limit: 10, windowMs: 60_000        },  // 10 login attempts/min
   contact:        { limit: 2,  windowMs: 30 * 60_000   },  // 2 messages/30min — anti-spam
   forgotPassword: { limit: 3,  windowMs: 15 * 60_000   },  // 3 resets/15min — email abuse guard
+  prompt:         { limit: 5,  windowMs: 60_000        },  // 5 prompt optimizations/min
   userProfile:    { limit: 20, windowMs: 60_000        },  // 20 profile updates/min
   userPassword:   { limit: 5,  windowMs: 60_000        },  // 5 password changes/min — bcrypt DoS guard
 } as const;

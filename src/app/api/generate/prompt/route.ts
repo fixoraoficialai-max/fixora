@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth/config";
 import { ApiErrors, apiSuccess } from "@/lib/api/response";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
+import { reserveCredits, releaseCredits } from "@/lib/credits";
 import {
   PROMPT_STYLES,
   PROMPT_TONES,
@@ -40,6 +41,11 @@ const schema = z.object({
     .optional(),
   imageMediaType: z.enum(ACCEPTED_IMAGE_TYPES).optional(),
 });
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PROMPT_CREDIT_COST = 1;
+const MODEL              = "claude-haiku-4-5-20251001";
 
 // ─── Anthropic client — singleton, one instance per lambda warm start ─────────
 
@@ -101,8 +107,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
-  // 5 optimizations per minute per user — isolated from video generation quota
-  if (!checkRateLimit(`prompt:${session.user.id}`, RATE_LIMITS.generate)) {
+  if (!(await checkRateLimit(`prompt:${session.user.id}`, RATE_LIMITS.prompt))) {
     return ApiErrors.tooManyRequests();
   }
 
@@ -117,6 +122,9 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
 
   const { prompt, style, tone, aspectRatio, imageBase64, imageMediaType } = parsed.data;
+
+  const reserved = await reserveCredits(session.user.id, PROMPT_CREDIT_COST);
+  if (!reserved) return ApiErrors.insufficientCredits();
 
   const context = buildContext(style, tone, aspectRatio);
   const content = buildMessageContent(prompt, context, imageBase64, imageMediaType);
@@ -135,12 +143,13 @@ export async function POST(req: NextRequest) {
   let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
   try {
     message = await anthropic.messages.create({
-      model:      "claude-3-5-haiku-20241022",
+      model:      MODEL,
       max_tokens: 300,
       system:     systemPrompt,
       messages:   [{ role: "user", content }],
     });
   } catch (err) {
+    await releaseCredits(session.user.id, PROMPT_CREDIT_COST);
     console.error("[prompt/route] Anthropic API error:", err);
     return ApiErrors.internal();
   }

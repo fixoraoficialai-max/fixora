@@ -204,7 +204,7 @@ AuditLog        → registro de acciones críticas
 
 ## Integración con Claude (Anthropic)
 
-**Modelo actual:** `claude-3-5-haiku-20241022` (prompts rápidos y económicos)  
+**Modelo actual:** `claude-haiku-4-5-20251001` (prompts rápidos y económicos)  
 **Cliente:** singleton en `src/lib/ai/client.ts`  
 **Uso actual:** optimización de prompts para generación de video/imagen  
 **Rate limit:** 5 optimizaciones/minuto por usuario  

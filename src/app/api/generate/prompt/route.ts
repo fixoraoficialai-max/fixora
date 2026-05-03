@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return ApiErrors.unauthorized();
 
   // 5 optimizations per minute per user — isolated from video generation quota
-  if (!(await checkRateLimit(`prompt:${session.user.id}`, RATE_LIMITS.generate))) {
+  if (!checkRateLimit(`prompt:${session.user.id}`, RATE_LIMITS.generate)) {
     return ApiErrors.tooManyRequests();
   }
 
@@ -132,12 +132,18 @@ export async function POST(req: NextRequest) {
     "Return ONLY the optimized prompt — no explanations, no headers, no formatting.",
   ].filter(Boolean).join(" ");
 
-  const message = await anthropic.messages.create({
-    model:      "claude-3-5-haiku-20241022",
-    max_tokens: 300,
-    system:     systemPrompt,
-    messages:   [{ role: "user", content }],
-  });
+  let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
+  try {
+    message = await anthropic.messages.create({
+      model:      "claude-3-5-haiku-20241022",
+      max_tokens: 300,
+      system:     systemPrompt,
+      messages:   [{ role: "user", content }],
+    });
+  } catch (err) {
+    console.error("[prompt/route] Anthropic API error:", err);
+    return ApiErrors.internal();
+  }
 
   const block     = message.content[0];
   const optimized = block?.type === "text" ? block.text.trim() : prompt;

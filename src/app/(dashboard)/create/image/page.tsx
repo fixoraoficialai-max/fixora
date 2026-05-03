@@ -254,7 +254,7 @@ export default function QuickImagePage() {
                     <Wand2 className="h-12 w-12 animate-pulse" />
                     <p className="text-sm font-medium animate-pulse">Flux AI está creando...</p>
                   </div>
-                ) : (
+                ) : generatedImages.length > 0 ? (
                   <>
                     <img 
                       src={generatedImages[0].imageUrl} 
@@ -278,7 +278,7 @@ export default function QuickImagePage() {
                       </a>
                     </div>
                   </>
-                )}
+                ) : null}
               </div>
               
               {error && (

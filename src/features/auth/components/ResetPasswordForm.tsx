@@ -61,8 +61,7 @@ export function ResetPasswordForm() {
       }
 
       setIsSuccess(true);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setServerError(t("networkError"));
     } finally {
       setIsSubmitting(false);

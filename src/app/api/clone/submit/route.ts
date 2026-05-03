@@ -58,8 +58,6 @@ export async function POST(req: NextRequest) {
       prompt,
       character_orientation: "video" as const, // SDK requires "video" | "image" — not plain string
     };
-    console.info("[clone/submit] Sending to Fal.ai:", JSON.stringify(falInput));
-
     const { request_id } = await fal.queue.submit(FAL_MODEL, {
       input: falInput,
       webhookUrl: buildWebhookUrl(),
@@ -75,8 +73,7 @@ export async function POST(req: NextRequest) {
     });
 
     return apiSuccess({ jobId: video.id, requestId: request_id });
-  } catch (err) {
-    console.error("[clone/submit]", err);
+  } catch {
     return ApiErrors.internal();
   }
 }

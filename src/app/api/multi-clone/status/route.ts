@@ -57,10 +57,12 @@ export async function POST(req: NextRequest) {
 
   if (parts.length === 0) return ApiErrors.notFound("Multi-Clone parts");
 
+  type PartMeta = { multiCloneId?: string; partIndex?: number };
+
   // 2b. Sort by sequence in memory (Prisma sorting on JSON paths can be limited)
   parts.sort((a, b) => {
-    const partA = (a.metadata as any)?.partIndex ?? 0;
-    const partB = (b.metadata as any)?.partIndex ?? 0;
+    const partA = (a.metadata as PartMeta)?.partIndex ?? 0;
+    const partB = (b.metadata as PartMeta)?.partIndex ?? 0;
     return partA - partB;
   });
 
@@ -81,7 +83,7 @@ export async function POST(req: NextRequest) {
       id: p.id,
       status: p.status,
       url: p.url,
-      partIndex: (p.metadata as any).partIndex
+      partIndex: (p.metadata as PartMeta)?.partIndex ?? 0
     }))
   });
 }

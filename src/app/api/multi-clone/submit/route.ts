@@ -78,8 +78,7 @@ export async function POST(req: NextRequest) {
       requestIds: results.map(r => r.request_id),
     });
 
-  } catch (err) {
-    console.error("[multi-clone/submit]", err);
+  } catch {
     // Fal.ai or DB failed AFTER credits were reserved — return them immediately
     await releaseCredits(userId, MULTI_CLONE_CREDITS).catch(() => null);
     return ApiErrors.internal();

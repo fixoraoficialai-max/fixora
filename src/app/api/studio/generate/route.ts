@@ -104,8 +104,7 @@ export async function POST(req: NextRequest) {
     });
 
     return apiSuccess({ jobId: video.id, requestId: request_id });
-  } catch (err) {
-    console.error("[studio/generate]", err);
+  } catch {
     await releaseCredits(userId, STUDIO_SCENE_CREDITS).catch(() => null);
     return ApiErrors.internal();
   }

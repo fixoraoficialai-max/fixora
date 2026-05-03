@@ -58,8 +58,7 @@ export function ChangePasswordForm({ hasPassword }: ChangePasswordFormProps) {
       setSuccessMessage(t("passwordChanged"));
       reset();
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setServerError(t("networkError"));
     } finally {
       setIsSubmitting(false);

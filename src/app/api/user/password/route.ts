@@ -68,8 +68,7 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[change-password] Error:", error);
+  } catch {
     return NextResponse.json(
       { success: false, error: "An unexpected error occurred while changing password" },
       { status: 500 }

@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
 
   // Guard: priceId must be configured (env var missing = deployment misconfiguration)
   if (!plan.priceId) {
-    console.error(`[stripe/checkout] priceId not configured for plan: ${planId}`);
     return ApiErrors.internal();
   }
 
@@ -108,8 +107,7 @@ async function resolveStripeCustomer(
     });
 
     return customer.id;
-  } catch (err) {
-    console.error("[stripe/checkout] resolveStripeCustomer error:", err);
+  } catch {
     return null;
   }
 }

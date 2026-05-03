@@ -16,7 +16,6 @@ import bcrypt from "bcryptjs";
 async function verifyRecaptcha(token: string): Promise<boolean> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
   if (!secret) {
-    console.warn("[login] RECAPTCHA_SECRET_KEY not set — skipping verification in dev");
     return true; // Allow in dev when key is not configured
   }
 

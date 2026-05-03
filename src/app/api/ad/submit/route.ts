@@ -69,8 +69,7 @@ export async function POST(req: NextRequest) {
     });
 
     return apiSuccess({ jobId: video.id, requestId: request_id });
-  } catch (err) {
-    console.error("[ad/submit]", err);
+  } catch {
     // Fal.ai or DB failed AFTER credits were reserved — return them immediately
     await releaseCredits(userId, AD_CREDITS).catch(() => null);
     return ApiErrors.internal();

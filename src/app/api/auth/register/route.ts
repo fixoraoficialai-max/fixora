@@ -102,9 +102,7 @@ export async function POST(req: NextRequest) {
   logAudit(AuditAction.REGISTER_SUCCESS, { userId: user.id, ip, metadata: { email: user.email } });
 
   // Fire-and-forget: send verification email without blocking the response
-  sendVerificationEmail(user.id, user.email).catch((err) =>
-    console.error("[register] Failed to send verification email:", err)
-  );
+  sendVerificationEmail(user.id, user.email).catch(() => null);
 
   return apiSuccess({ email: user.email }, 201);
 }

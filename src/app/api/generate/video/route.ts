@@ -122,7 +122,6 @@ export async function POST(req: NextRequest) {
     outputUrl = result.video?.url ?? result.videos?.[0]?.url ?? "";
     if (!outputUrl) throw new Error("No video URL in Fal.ai response");
   } catch (falErr) {
-    console.error("[generate/video] Fal.ai error:", falErr);
     const msg = falErr instanceof Error ? falErr.message : "Video generation failed";
     return ApiErrors.validation({ message: msg });
   }
@@ -152,10 +151,9 @@ export async function POST(req: NextRequest) {
         data: { status: "COMPLETED" },
       });
     }
-  } catch (dbErr) {
+  } catch {
     // Video was generated — return it even if DB persistence fails.
     // A transient DB error should not cause the user to lose their result.
-    console.error("[generate/video] DB persistence error:", dbErr);
   }
 
   return apiSuccess({ videoUrl: outputUrl, duration: parseInt(duration, 10) });

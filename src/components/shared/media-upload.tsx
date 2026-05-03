@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Upload, X, CheckCircle, Film } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export type UploadState = { 
   url: string; 
@@ -17,14 +18,15 @@ export const EMPTY_UPLOAD: UploadState = { url: "", preview: "", uploading: fals
  * whose blob URL the browser can't decode but the server can process fine.
  */
 export function ImagePreview({ state }: { state: UploadState }) {
+  const t = useTranslations("upload");
   if (state.preview === "__heic__") {
     return (
       <div className="w-full aspect-square bg-surface-elevated flex flex-col items-center justify-center gap-2 p-3">
         <CheckCircle className="h-8 w-8 text-success" />
-        <p className="text-xs text-success font-medium text-center">Foto HEIC lista</p>
+        <p className="text-xs text-success font-medium text-center">{t("heicReady")}</p>
         <p className="text-[10px] text-text-muted text-center">{state.fileName}</p>
         <p className="text-[10px] text-text-muted text-center">
-          {state.uploading ? "Convirtiendo y subiendo…" : "Convertida a JPG · Lista para procesar"}
+          {state.uploading ? t("converting") : t("converted")}
         </p>
       </div>
     );

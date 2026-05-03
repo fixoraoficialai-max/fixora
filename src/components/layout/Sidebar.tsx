@@ -36,15 +36,13 @@ const NAV_ITEMS = [
   { translationKey: "navSettings",  href: "/settings",  icon: Settings },
 ] as const;
 
-// Brand-name labels are not translated (they are product names).
-// "Imagen" is the only UI word here — kept as translationKey.
 const QUICK_ITEMS = [
-  { label: "Prompt",       translationKey: null, href: "/create/prompt",      icon: MessageSquare, credits: "1 cr"  },
-  { label: "Imagen",       translationKey: null, href: "/create/image",       icon: ImageIcon,     credits: "2 cr"  },
-  { label: "Video",        translationKey: null, href: "/create/video",       icon: Video,         credits: "5 cr"  },
-  { label: "Avatar AI",    translationKey: null, href: "/create/clone",       icon: Users,         credits: "10 cr" },
-  { label: "Multi-Avatar", translationKey: null, href: "/create/multi-clone", icon: Grid,          credits: "40 cr" },
-  { label: "Ad Creator",   translationKey: null, href: "/create/ad",          icon: Megaphone,     credits: "25 cr" },
+  { translationKey: "quickPrompt",      href: "/create/prompt",      icon: MessageSquare, credits: "1 cr"  },
+  { translationKey: "quickImage",       href: "/create/image",       icon: ImageIcon,     credits: "2 cr"  },
+  { translationKey: "quickVideo",       href: "/create/video",       icon: Video,         credits: "5 cr"  },
+  { translationKey: "quickAvatarAI",    href: "/create/clone",       icon: Users,         credits: "10 cr" },
+  { translationKey: "quickMultiAvatar", href: "/create/multi-clone", icon: Grid,          credits: "40 cr" },
+  { translationKey: "quickAdCreator",   href: "/create/ad",          icon: Megaphone,     credits: "25 cr" },
 ] as const;
 
 interface SidebarProps {
@@ -125,7 +123,7 @@ export function Sidebar({
           {t("quickCreate")}
         </p>
         <div className="flex flex-col gap-0.5">
-          {QUICK_ITEMS.map(({ label, href, icon: Icon, credits }) => {
+          {QUICK_ITEMS.map(({ translationKey, href, icon: Icon, credits }) => {
             const isActive = pathname === href;
             return (
               <Link
@@ -139,7 +137,7 @@ export function Sidebar({
                 )}
               >
                 <Icon className="h-3.5 w-3.5 flex-shrink-0" />
-                {label}
+                {t(translationKey)}
                 <span className="ml-auto text-2xs text-text-muted">{credits}</span>
               </Link>
             );

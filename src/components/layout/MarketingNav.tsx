@@ -13,15 +13,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const NAV_LINKS = [
-  { href: "#features",     label: "Features" },
-  { href: "#pricing",      label: "Pricing" },
-  { href: "#how-it-works", label: "How it works" },
-] as const;
+import { useTranslations } from "next-intl";
 
 export function MarketingNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslations("marketing");
+
+  const NAV_LINKS = [
+    { href: "#features",     label: t("navFeatures") },
+    { href: "#pricing",      label: t("navPricing") },
+    { href: "#how-it-works", label: t("navHowItWorks") },
+  ];
 
   const close = () => setIsOpen(false);
 
@@ -58,11 +60,11 @@ export function MarketingNav() {
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/login">Sign in</Link>
+            <Link href="/login">{t("signIn")}</Link>
           </Button>
           <Button size="sm" asChild>
             <Link href="/register">
-              Get started <ArrowRight className="h-3.5 w-3.5" />
+              {t("getStarted")} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
         </div>
@@ -71,7 +73,7 @@ export function MarketingNav() {
         <button
           className="md:hidden rounded-md p-1.5 text-text-muted hover:text-text-primary transition-colors"
           onClick={() => setIsOpen((prev) => !prev)}
-          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-label={isOpen ? t("closeMenu") : t("openMenu")}
           aria-expanded={isOpen}
           aria-controls="mobile-nav"
         >
@@ -101,11 +103,11 @@ export function MarketingNav() {
 
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
               <Button variant="secondary" asChild>
-                <Link href="/login" onClick={close}>Sign in</Link>
+                <Link href="/login" onClick={close}>{t("signIn")}</Link>
               </Button>
               <Button asChild>
                 <Link href="/register" onClick={close}>
-                  Get started <ArrowRight className="h-3.5 w-3.5" />
+                  {t("getStarted")} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </Button>
             </div>

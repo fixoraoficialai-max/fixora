@@ -27,8 +27,7 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json({ success: true, user: updatedUser });
-  } catch (error) {
-    console.error("[update-profile] Error:", error);
+  } catch {
     return NextResponse.json(
       { success: false, error: "An unexpected error occurred while updating profile" },
       { status: 500 }

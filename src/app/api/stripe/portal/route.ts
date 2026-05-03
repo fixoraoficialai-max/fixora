@@ -42,8 +42,7 @@ export async function POST(req: NextRequest) {
     });
 
     return apiSuccess({ url: portalSession.url });
-  } catch (err) {
-    console.error("[stripe/portal] Error creating portal session:", err);
+  } catch {
     return ApiErrors.internal();
   }
 }

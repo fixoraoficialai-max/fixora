@@ -50,8 +50,6 @@ export async function POST(req: NextRequest) {
   });
 
   if (!video) {
-    // Unknown request_id — log and acknowledge to prevent Fal.ai retries
-    console.warn(`[webhook/fal] No record for requestId: ${request_id}`);
     return NextResponse.json({ received: true });
   }
 
@@ -64,16 +62,12 @@ export async function POST(req: NextRequest) {
   if (status === "OK") {
     const videoUrl = payload?.video?.url;
     if (!videoUrl) {
-      // Fal.ai returned OK but no URL — treat as failure, no credits charged
       await markVideoFailed(video.id);
-      console.error(`[webhook/fal] Status OK but no video URL for requestId: ${request_id}`);
     } else {
       await settleVideoCompletion(video.userId, video.id, videoUrl, video.creditsUsed);
-      console.info(`[webhook/fal] Video ${video.id} COMPLETED`);
     }
   } else {
     await markVideoFailed(video.id);
-    console.info(`[webhook/fal] Video ${video.id} FAILED (status: ${status})`);
   }
 
   return NextResponse.json({ received: true });

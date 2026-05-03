@@ -97,7 +97,6 @@ export async function POST(req: NextRequest) {
 
     return apiSuccess({ status: falStatus.status, videoUrl: null });
   } catch (err) {
-    console.error("[clone/status]", err);
     const status = (err as { status?: number }).status;
     if (status === 422) {
       await markVideoFailed(jobId).catch(() => null);

@@ -74,8 +74,7 @@ export async function POST(req: NextRequest) {
     }
 
     return apiSuccess({ status: falStatus.status, videoUrl: null });
-  } catch (err) {
-    console.error("[studio/status]", err);
+  } catch {
     return ApiErrors.internal();
   }
 }

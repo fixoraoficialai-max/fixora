@@ -10,7 +10,9 @@
 Plataforma SaaS de generación de video con IA. Los usuarios crean videos, imágenes, avatares y contenido publicitario usando créditos prepagados. Monetización por suscripción (Stripe) y créditos adicionales.
 
 **Empresa:** fixoraoficialai-max  
-**Dominio:** fixoravideo.com  
+**Dominio:** fixora
+
+video.com  
 **Repositorio:** github.com/fixoraoficialai-max/fixora
 
 ---
@@ -43,6 +45,11 @@ Plataforma SaaS de generación de video con IA. Los usuarios crean videos, imág
 ```
 ✅ Código limpio — nombrar variables con intención clara
 ✅ Código seguro — nunca confiar en datos del cliente
+✅ codigo escalable y matenible 
+✅ codigo solido que pueda soportar de 10 usuarios a millones de usuarios sin romperse ni caerse ni generar errores ni lentitud ni latencia ni saturacion ni cuellos de botellas ni nada por el estilo 
+✅ codigo ordenado y limpio 
+✅ codigo limpio y legible
+✅ optimizar el codigo para que sea mas rapido y eficiente 
 ✅ Sin código fake — no simular funcionalidad
 ✅ Sin código duplicado — DRY estricto
 ✅ Cada función hace UNA sola tarea

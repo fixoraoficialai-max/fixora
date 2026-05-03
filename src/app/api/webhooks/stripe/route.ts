@@ -27,13 +27,11 @@ export async function POST(req: NextRequest) {
   const sigHeader = req.headers.get("stripe-signature");
 
   if (!sigHeader) {
-    console.warn("[webhook/stripe] Missing stripe-signature header");
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    console.error("[webhook/stripe] STRIPE_WEBHOOK_SECRET is not set");
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
@@ -41,8 +39,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(rawBody, sigHeader, webhookSecret);
-  } catch (err) {
-    console.warn("[webhook/stripe] Signature verification failed:", err);
+  } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -58,10 +55,9 @@ export async function POST(req: NextRequest) {
 
     // 4. Mark as processed — only after successful handling
     await db.stripeEvent.create({ data: { id: event.id } });
-  } catch (err) {
-    // Log but return 200 — Stripe will retry on non-2xx. We've already
+  } catch {
+    // Return 200 — Stripe will retry on non-2xx. We've already
     // verified the event is authentic; a processing error is our bug, not theirs.
-    console.error(`[webhook/stripe] Failed to process event ${event.type}:`, err);
     return NextResponse.json({ received: true, error: "Processing failed" }, { status: 200 });
   }
 
@@ -90,8 +86,7 @@ async function dispatchEvent(event: Stripe.Event): Promise<void> {
       break;
 
     default:
-      // Unhandled event types are fine — log and ignore
-      console.info(`[webhook/stripe] Unhandled event type: ${event.type}`);
+      break;
   }
 }
 
@@ -107,22 +102,13 @@ async function dispatchEvent(event: Stripe.Event): Promise<void> {
  */
 async function handleSubscriptionUpsert(sub: Stripe.Subscription): Promise<void> {
   const userId = sub.metadata.userId;
-  if (!userId) {
-    console.warn("[webhook/stripe] subscription.created/updated missing userId metadata", { subId: sub.id });
-    return;
-  }
+  if (!userId) return;
 
   const priceId = sub.items.data[0]?.price.id;
-  if (!priceId) {
-    console.warn("[webhook/stripe] subscription has no price", { subId: sub.id });
-    return;
-  }
+  if (!priceId) return;
 
   const plan = findPlanByPriceId(priceId);
-  if (!plan) {
-    console.error("[webhook/stripe] Unknown priceId — not in PLANS registry:", priceId);
-    return;
-  }
+  if (!plan) return;
 
   // Determine if this is a brand-new subscription (status transitions to active for the first time)
   const isNew = sub.status === "active";
@@ -174,10 +160,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     select: { userId: true, monthlyCredits: true, plan: true },
   });
 
-  if (!subscription) {
-    console.error("[webhook/stripe] invoice.paid — no subscription found for:", subId);
-    return;
-  }
+  if (!subscription) return;
 
   const { userId, monthlyCredits } = subscription;
 
@@ -218,10 +201,7 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription): Promise<void
     select: { userId: true },
   });
 
-  if (!subscription) {
-    console.warn("[webhook/stripe] subscription.deleted — no matching record for:", sub.id);
-    return;
-  }
+  if (!subscription) return;
 
   const { userId } = subscription;
 

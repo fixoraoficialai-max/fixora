@@ -1,4 +1,7 @@
+"use client";
+
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = {
@@ -54,26 +57,37 @@ export function Badge({
 import type { VideoStatus, ProjectStatus } from "@/types";
 
 export function VideoStatusBadge({ status }: { status: VideoStatus }) {
-  const config: Record<VideoStatus, { label: string; variant: BadgeVariant }> = {
-    PENDING: { label: "Pending", variant: "default" },
-    QUEUED: { label: "Queued", variant: "primary" },
-    PROCESSING: { label: "Processing", variant: "warning" },
-    COMPLETED: { label: "Completed", variant: "success" },
-    FAILED: { label: "Failed", variant: "danger" },
+  const t = useTranslations("common");
+  const variants: Record<VideoStatus, BadgeVariant> = {
+    PENDING:    "default",
+    QUEUED:     "primary",
+    PROCESSING: "warning",
+    COMPLETED:  "success",
+    FAILED:     "danger",
   };
-
-  const { label, variant } = config[status];
-  return <Badge variant={variant} dot>{label}</Badge>;
+  const labels: Record<VideoStatus, string> = {
+    PENDING:    t("statusPending"),
+    QUEUED:     t("statusQueued"),
+    PROCESSING: t("statusProcessing"),
+    COMPLETED:  t("statusCompleted"),
+    FAILED:     t("statusFailed"),
+  };
+  return <Badge variant={variants[status]} dot>{labels[status]}</Badge>;
 }
 
 export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
-  const config: Record<ProjectStatus, { label: string; variant: BadgeVariant }> = {
-    DRAFT: { label: "Draft", variant: "default" },
-    IN_PROGRESS: { label: "In Progress", variant: "primary" },
-    COMPLETED: { label: "Completed", variant: "success" },
-    ARCHIVED: { label: "Archived", variant: "default" },
+  const t = useTranslations("common");
+  const variants: Record<ProjectStatus, BadgeVariant> = {
+    DRAFT:       "default",
+    IN_PROGRESS: "primary",
+    COMPLETED:   "success",
+    ARCHIVED:    "default",
   };
-
-  const { label, variant } = config[status];
-  return <Badge variant={variant} dot>{label}</Badge>;
+  const labels: Record<ProjectStatus, string> = {
+    DRAFT:       t("statusDraft"),
+    IN_PROGRESS: t("statusInProgress"),
+    COMPLETED:   t("statusCompleted"),
+    ARCHIVED:    t("statusArchived"),
+  };
+  return <Badge variant={variants[status]} dot>{labels[status]}</Badge>;
 }

@@ -58,8 +58,7 @@ export function ProfileEditForm({ initialName }: ProfileEditFormProps) {
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setServerError(t("networkError"));
     } finally {
       setIsSubmitting(false);

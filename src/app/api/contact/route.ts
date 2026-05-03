@@ -58,7 +58,6 @@ export async function POST(req: NextRequest) {
   // 4. Resolve admin email — must be configured in environment
   const adminEmail = process.env.ADMIN_CONTACT_EMAIL;
   if (!adminEmail) {
-    console.error("[contact] ADMIN_CONTACT_EMAIL env var is not set");
     return ApiErrors.internal();
   }
 

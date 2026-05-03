@@ -145,22 +145,33 @@ function rateLimitInMemory(key: string, opts: RateLimitOptions): boolean {
 
 // ── Redis limiters (sliding window, distributed across all instances) ─────────
 
+let _redis: Redis | null | undefined;
+function getRedis(): Redis | null {
+  if (_redis !== undefined) return _redis;
+  try {
+    const url   = process.env.UPSTASH_REDIS_REST_URL?.trim();
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+    _redis = (url && token) ? new Redis({ url, token }) : null;
+  } catch {
+    _redis = null;
+  }
+  return _redis;
+}
+
 const redisLimiters = new Map<string, Ratelimit | null>();
 
 function getRedisLimiter(limit: number, windowMs: number): Ratelimit | null {
   const mapKey = `${limit}:${windowMs}`;
   if (redisLimiters.has(mapKey)) return redisLimiters.get(mapKey) ?? null;
 
-  const url   = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  if (!url || !token) {
+  const redis = getRedis();
+  if (!redis) {
     redisLimiters.set(mapKey, null);
     return null;
   }
 
   const limiter = new Ratelimit({
-    redis:     new Redis({ url, token }),
+    redis:     redis,
     limiter:   Ratelimit.slidingWindow(limit, `${windowMs}ms`),
     analytics: false,
     prefix:    "@fixora/user-rl",

@@ -9,17 +9,22 @@ import { Ratelimit } from "@upstash/ratelimit";
  * Falls back gracefully when env vars are not set (e.g., local development).
  */
 function createRedisClient(): Redis | null {
-  const url   = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  try {
+    const url   = process.env.UPSTASH_REDIS_REST_URL?.trim();
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
 
-  if (!url || !token) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("[redis] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN is not set in production!");
+    if (!url || !token) {
+      if (process.env.NODE_ENV === "production") {
+        console.error("[redis] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN is not set in production!");
+      }
+      return null;
     }
+
+    return new Redis({ url, token });
+  } catch (err) {
+    console.error("[redis] Failed to initialize Redis client:", err);
     return null;
   }
-
-  return new Redis({ url, token });
 }
 
 const redis = createRedisClient();

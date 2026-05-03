@@ -89,7 +89,10 @@ export async function POST(req: NextRequest) {
   // 5. Validate PIN — constant-time safe (both strings same type, Zod already validated length)
   const adminPin = process.env.ADMIN_PIN;
   if (!adminPin) {
-    return ApiErrors.internal();
+    return NextResponse.json(
+      { success: false, error: "Falla Crítica: La variable ADMIN_PIN está vacía en Vercel." },
+      { status: 500 }
+    );
   }
 
   if (pin !== adminPin) {

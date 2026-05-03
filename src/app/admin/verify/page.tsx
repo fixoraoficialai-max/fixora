@@ -104,7 +104,7 @@ export default function AdminVerifyPage() {
         attempts?:       number;
         attemptsLeft?:   number;
         requireRecaptcha?: boolean;
-        error?:          string;
+        error?:          string | { code: string; message: string; details?: unknown };
       };
 
       if (data.success) {
@@ -130,7 +130,16 @@ export default function AdminVerifyPage() {
       if (typeof data.attemptsLeft === "number") setAttemptsLeft(data.attemptsLeft as typeof ADMIN_PIN_CONFIG.maxAttempts);
       if (data.requireRecaptcha) setShowRecaptcha(true);
 
-      setError(data.error ?? `PIN incorrecto. ${data.attemptsLeft ?? ""} intentos restantes.`);
+      let errorMessage = `PIN incorrecto. ${data.attemptsLeft ?? ""} intentos restantes.`;
+      if (data.error) {
+        if (typeof data.error === "string") {
+          errorMessage = data.error;
+        } else if (typeof data.error === "object" && data.error.message) {
+          errorMessage = data.error.message;
+        }
+      }
+
+      setError(errorMessage);
     } catch {
       setError("Error de conexión. Inténtalo de nuevo.");
     } finally {

@@ -92,20 +92,24 @@ export default function AdminVerifyPage() {
     setError(null);
 
     try {
-      const res  = await fetch("/api/admin/verify", {
-        method:  "POST",
+      const res = await fetch("/api/admin/verify", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ pin, recaptchaToken: recaptchaToken ?? undefined }),
+        body: JSON.stringify({ pin, recaptchaToken: recaptchaToken ?? undefined }),
       });
-      const data = await res.json() as {
-        success:         boolean;
-        locked?:         boolean;
-        remainingMs?:    number;
-        attempts?:       number;
-        attemptsLeft?:   number;
-        requireRecaptcha?: boolean;
-        error?:          string | { code: string; message: string; details?: unknown };
-      };
+
+      let data;
+      try {
+        data = await res.json() as {
+          success: boolean; locked?: boolean; remainingMs?: number; attempts?: number;
+          attemptsLeft?: number; requireRecaptcha?: boolean;
+          error?: string | { code: string; message: string; details?: unknown };
+        };
+      } catch (parseError) {
+        // Vercel crashed and returned HTML instead of JSON. Catch the HTML text!
+        const textError = await res.text().catch(() => "");
+        throw new Error(`CRASH VERCEL (Status ${res.status}): ${textError.substring(0, 100)}...`);
+      }
 
       if (data.success) {
         router.replace("/admin");
@@ -138,10 +142,10 @@ export default function AdminVerifyPage() {
           errorMessage = data.error.message;
         }
       }
-
       setError(errorMessage);
-    } catch {
-      setError("Error de conexión. Inténtalo de nuevo.");
+
+    } catch (err) {
+      setError(`Error de red/servidor: ${(err as Error).message}`);
     } finally {
       setSubmitting(false);
     }

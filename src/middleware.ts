@@ -151,7 +151,8 @@ export default auth(async (req) => {
     if (path !== "/admin/verify") {
       const userId      = (session as { user?: { id?: string } })?.user?.id ?? "";
       const cookieValue = req.cookies.get("admin_verified")?.value ?? "";
-      const secret      = (process.env.NEXTAUTH_SECRET ?? "") + (process.env.ADMIN_PIN ?? "");
+      // AUTH_SECRET is the NextAuth v5 name — must match cookieSecret() in /api/admin/verify/route.ts
+      const secret      = (process.env.AUTH_SECRET ?? "") + (process.env.ADMIN_PIN ?? "");
       const valid       = await verifyAdminCookie(cookieValue, userId, secret);
       if (!valid) {
         return NextResponse.redirect(new URL("/admin/verify", nextUrl.origin));

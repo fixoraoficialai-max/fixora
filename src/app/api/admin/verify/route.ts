@@ -36,7 +36,8 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
 // ─── Cookie signing secret ────────────────────────────────────────────────────
 
 function cookieSecret(): string {
-  return (process.env.NEXTAUTH_SECRET ?? "") + (process.env.ADMIN_PIN ?? "");
+  // AUTH_SECRET is the NextAuth v5 variable name (NEXTAUTH_SECRET is v4 — not used here)
+  return (process.env.AUTH_SECRET ?? "") + (process.env.ADMIN_PIN ?? "");
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────

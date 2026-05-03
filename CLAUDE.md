@@ -49,6 +49,7 @@ video.com
 ✅ codigo solido que pueda soportar de 10 usuarios a millones de usuarios sin romperse ni caerse ni generar errores ni lentitud ni latencia ni saturacion ni cuellos de botellas ni nada por el estilo 
 ✅ codigo ordenado y limpio 
 ✅ codigo limpio y legible
+
 ✅ optimizar el codigo para que sea mas rapido y eficiente 
 ✅ Sin código fake — no simular funcionalidad
 ✅ Sin código duplicado — DRY estricto
@@ -204,7 +205,7 @@ AuditLog        → registro de acciones críticas
 
 ## Integración con Claude (Anthropic)
 
-**Modelo actual:** `claude-haiku-4-5-20251001` (prompts rápidos y económicos)  
+**Modelo actual:** `claude-3-5-haiku-20241022` (prompts rápidos y económicos)  
 **Cliente:** singleton en `src/lib/ai/client.ts`  
 **Uso actual:** optimización de prompts para generación de video/imagen  
 **Rate limit:** 5 optimizaciones/minuto por usuario  
@@ -275,9 +276,10 @@ return ApiErrors.notFound()
 # Base de datos
 DATABASE_URL=
 
-# Autenticación
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=
+# Autenticación (NextAuth v5 — variables renombradas de v4)
+AUTH_SECRET=
+AUTH_URL=
+ADMIN_PIN=   # PIN del panel admin (15-30 chars) — solo en Vercel, nunca en .env
 
 # OAuth
 GOOGLE_CLIENT_ID=

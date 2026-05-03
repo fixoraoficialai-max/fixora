@@ -7,8 +7,7 @@ import { Textarea, FormField } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 
-const STYLES = ["Pixar 3D", "Anime", "Cinematic", "Documentary", "Dark & Moody", "Bright & Clean", "Futuristic", "Retro"];
-const TONES = ["Professional", "Inspirational", "Energetic", "Calm", "Playful", "Urgent"];
+import { PROMPT_STYLES, PROMPT_TONES } from "@/lib/prompt-constants";
 
 export default function QuickPromptPage() {
   const [input, setInput] = useState("");
@@ -76,7 +75,7 @@ export default function QuickPromptPage() {
 
           <FormField label="Estilo visual (opcional)">
             <div className="flex flex-wrap gap-2">
-              {STYLES.map((s) => (
+              {PROMPT_STYLES.map((s) => (
                 <button key={s} type="button"
                   onClick={() => setStyle(style === s ? "" : s)}
                   className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-all",
@@ -89,7 +88,7 @@ export default function QuickPromptPage() {
 
           <FormField label="Tono (opcional)">
             <div className="flex flex-wrap gap-2">
-              {TONES.map((t) => (
+              {PROMPT_TONES.map((t) => (
                 <button key={t} type="button"
                   onClick={() => setTone(tone === t ? "" : t)}
                   className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-all",

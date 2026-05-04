@@ -1,26 +1,54 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Sparkles, Copy, Check, RefreshCw, Paperclip, X, ArrowRight, Zap } from "lucide-react";
+import {
+  Plus,
+  Send,
+  Copy,
+  Check,
+  RefreshCw,
+  X,
+  ImageIcon,
+  Clapperboard,
+  Wand2,
+  Cpu,
+  Moon,
+  Sun,
+  Zap,
+  Circle,
+  Eye,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 import {
-  PROMPT_STYLES,
-  PROMPT_TONES,
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
   type AcceptedImageType,
 } from "@/lib/prompt-constants";
+
+// ─── Style chips — defined here as UI data, not sent raw to the API.
+// The actual allowlist lives in PROMPT_STYLES (lib/prompt-constants).
+// Only values matching that enum reach the backend.
+
+import { PROMPT_STYLES } from "@/lib/prompt-constants";
+
+const STYLE_ICONS: Record<string, React.ReactNode> = {
+  Cinematic:      <Clapperboard className="h-3.5 w-3.5" />,
+  Documentary:    <Eye className="h-3.5 w-3.5" />,
+  Anime:          <Circle className="h-3.5 w-3.5" />,
+  "Pixar 3D":     <Cpu className="h-3.5 w-3.5" />,
+  "Dark & Moody": <Moon className="h-3.5 w-3.5" />,
+  "Bright & Clean": <Sun className="h-3.5 w-3.5" />,
+  Futuristic:     <Zap className="h-3.5 w-3.5" />,
+  Retro:          <Wand2 className="h-3.5 w-3.5" />,
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface OptimizePayload {
   prompt:          string;
   style?:          string;
-  tone?:           string;
   imageBase64?:    string;
   imageMediaType?: AcceptedImageType;
 }
@@ -32,7 +60,6 @@ export default function QuickPromptPage() {
 
   const [input, setInput]                   = useState("");
   const [style, setStyle]                   = useState("");
-  const [tone, setTone]                     = useState("");
   const [result, setResult]                 = useState("");
   const [isLoading, setIsLoading]           = useState(false);
   const [copied, setCopied]                 = useState(false);
@@ -85,16 +112,20 @@ export default function QuickPromptPage() {
 
   const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) processImageFile(file);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) processImageFile(file);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
-  // ── Optimize ────────────────────────────────────────────────────────────────
+  // ── Generate ────────────────────────────────────────────────────────────────
 
-  async function handleOptimize() {
+  async function handleGenerate() {
     const trimmed = input.trim();
     if (trimmed.length < 5) { setError(t("promptErrorMin")); return; }
 
@@ -104,8 +135,7 @@ export default function QuickPromptPage() {
 
     const payload: OptimizePayload = {
       prompt:         trimmed,
-      style:          style  || undefined,
-      tone:           tone   || undefined,
+      style:          style || undefined,
       imageBase64:    imageBase64    ?? undefined,
       imageMediaType: imageMediaType ?? undefined,
     };
@@ -145,7 +175,6 @@ export default function QuickPromptPage() {
   function handleReset() {
     setInput("");
     setStyle("");
-    setTone("");
     setResult("");
     setError("");
     handleImageRemove();
@@ -155,208 +184,179 @@ export default function QuickPromptPage() {
 
   return (
     <div
-      className="flex flex-col h-full bg-[#070709] overflow-hidden"
+      className="flex flex-col h-full bg-[#0a0a0a] overflow-hidden"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <TopBar title={t("promptTitle")} description={t("promptDesc")} />
 
-      <div className="flex-1 overflow-y-auto px-4 py-12 md:py-20">
-        <div className="mx-auto max-w-2xl flex flex-col gap-10">
+      <div className="flex-1 overflow-y-auto flex items-start justify-center px-4 py-16 md:py-24">
+        <div className="w-full max-w-2xl flex flex-col items-center gap-8">
 
-          {/* ── Hero ─────────────────────────────────────────────────────── */}
-          <div className="text-center flex flex-col gap-3">
-            <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-              {t("promptHeroTitle")}
-            </h1>
-            <p className="text-text-muted text-sm md:text-base">
-              {t("promptHeroSub")}
-            </p>
-          </div>
+          {/* ── Hero title ───────────────────────────────────────────────── */}
+          <h1 className="text-4xl md:text-5xl font-bold text-white text-center leading-tight tracking-tight">
+            {t("promptHeroTitle")}
+          </h1>
 
-          {/* ── Input card ───────────────────────────────────────────────── */}
-          <div className="relative group">
-            {/* Glow halo */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-[2.5rem] blur opacity-25 group-focus-within:opacity-50 transition duration-1000" />
+          {/* ── Input box ────────────────────────────────────────────────── */}
+          <div className="w-full rounded-2xl bg-[#1c1c1e] px-5 pt-4 pb-3 flex flex-col gap-3">
 
-            <div className="relative flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-surface/50 p-5 backdrop-blur-xl transition-all focus-within:border-primary/30">
-
-              {/* Image preview strip — shown when image is attached */}
-              {imagePreview && (
-                <div className="relative flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                  <img
-                    src={imagePreview}
-                    alt="reference"
-                    className="h-10 w-10 rounded-lg object-cover flex-shrink-0"
-                  />
-                  <span className="text-xs text-white/60 flex-1 truncate">{t("promptImageAttached")}</span>
-                  <button
-                    type="button"
-                    onClick={handleImageRemove}
-                    aria-label={t("promptRemoveAria")}
-                    className="p-1 rounded-full text-white/30 hover:text-white/70 transition-colors flex-shrink-0"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-
-              {/* Main textarea */}
-              <Textarea
-                placeholder={t("promptIdeaPlaceholder")}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="min-h-[120px] w-full resize-none border-none bg-transparent text-lg text-white placeholder:text-white/20 focus-visible:ring-0"
-              />
-
-              {/* Action bar */}
-              <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                <div className="flex items-center gap-2 flex-wrap">
-
-                  {/* Attach image button */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                      imageBase64
-                        ? "bg-primary/20 text-primary-light"
-                        : "bg-white/5 text-white hover:bg-white/10"
-                    )}
-                  >
-                    <Paperclip className="h-3.5 w-3.5" />
-                    <span>{imageBase64 ? t("promptWithImage") : t("promptAttachImage")}</span>
-                  </button>
-
-                  {/* Separator */}
-                  <div className="h-4 w-px bg-white/10 mx-1" />
-
-                  {/* Style chips */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {PROMPT_STYLES.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setStyle(style === s ? "" : s)}
-                        className={cn(
-                          "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all",
-                          style === s
-                            ? "border-primary/40 bg-primary/10 text-primary-light"
-                            : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
-                        )}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Generate button */}
+            {/* Image preview thumbnail */}
+            {imagePreview && (
+              <div className="flex items-center gap-2">
+                <img
+                  src={imagePreview}
+                  alt="ref"
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
+                <span className="text-xs text-white/40 flex-1 truncate">{t("promptImageAttached")}</span>
                 <button
                   type="button"
-                  onClick={handleOptimize}
-                  disabled={input.trim().length < 5 || isLoading}
-                  aria-label={t("promptOptimize")}
-                  className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition-all hover:bg-white/90 disabled:bg-white/20 disabled:cursor-not-allowed"
+                  onClick={handleImageRemove}
+                  aria-label={t("promptRemoveAria")}
+                  className="text-white/30 hover:text-white/60 transition-colors"
                 >
-                  {isLoading
-                    ? <RefreshCw className="h-5 w-5 animate-spin" />
-                    : <Sparkles className="h-5 w-5" />
-                  }
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
+            )}
+
+            {/* Textarea */}
+            <textarea
+              placeholder={t("promptIdeaPlaceholder")}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              rows={3}
+              className="w-full resize-none bg-transparent text-white/90 placeholder:text-white/25 text-base leading-relaxed outline-none"
+            />
+
+            {/* Bottom row: + and send */}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-[#2c2c2e] text-white/50 hover:text-white/80 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={input.trim().length < 5 || isLoading}
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-[#2c2c2e] text-white/50 hover:text-white/80 disabled:opacity-30 transition-colors"
+              >
+                {isLoading
+                  ? <RefreshCw className="h-4 w-4 animate-spin" />
+                  : <Send className="h-4 w-4" />
+                }
+              </button>
             </div>
           </div>
 
-          {/* Tone chips — below the card, subtle */}
-          {PROMPT_TONES.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap justify-center">
-              <span className="text-xs text-white/30 mr-1">{t("promptToneLabel")}:</span>
-              {PROMPT_TONES.map((t_item) => (
-                <button
-                  key={t_item}
-                  type="button"
-                  onClick={() => setTone(tone === t_item ? "" : t_item)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-all",
-                    tone === t_item
-                      ? "border-accent/40 bg-accent/10 text-accent-light"
-                      : "border-white/10 text-white/30 hover:border-white/20 hover:text-white/50"
-                  )}
-                >
-                  {t_item}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* ── Style chips ──────────────────────────────────────────────── */}
+          <div className="flex flex-wrap justify-center gap-2.5">
+            {PROMPT_STYLES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStyle(style === s ? "" : s)}
+                className={cn(
+                  "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all",
+                  style === s
+                    ? "bg-[#3a3a3c] text-white ring-1 ring-white/20"
+                    : "bg-[#1c1c1e] text-white/50 hover:bg-[#2c2c2e] hover:text-white/70"
+                )}
+              >
+                <span className="opacity-60">{STYLE_ICONS[s]}</span>
+                {s}
+              </button>
+            ))}
+          </div>
 
-          {/* Error */}
+          {/* ── Error ────────────────────────────────────────────────────── */}
           {error && (
-            <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger text-center">
-              {error}
-            </div>
+            <p className="text-sm text-red-400 text-center">{error}</p>
           )}
 
-          {/* ── Drag overlay ─────────────────────────────────────────────── */}
-          {isDragging && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
-              <div className="flex flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-primary/60 bg-surface/80 px-12 py-8">
-                <Paperclip className="h-10 w-10 text-primary-light animate-bounce" />
-                <p className="text-white font-semibold">{t("promptDropDragging")}</p>
-                <p className="text-white/50 text-xs">{t("promptDropFormat")}</p>
-              </div>
+          {/* ── Generate button ───────────────────────────────────────────── */}
+          {!result && (
+            <div className="relative mt-4">
+              {/* Purple glow behind button */}
+              <div className="absolute inset-0 rounded-full bg-[#7c3aed] blur-xl opacity-50 scale-110" />
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={input.trim().length < 5 || isLoading}
+                className="relative flex items-center gap-2 rounded-full bg-[#7c3aed] px-8 py-4 text-base font-semibold text-white shadow-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#6d28d9] transition-colors"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                    {t("promptOptimizing")}
+                  </>
+                ) : (
+                  <>
+                    {t("promptOptimize")} ✨
+                  </>
+                )}
+              </button>
             </div>
           )}
 
           {/* ── Result ───────────────────────────────────────────────────── */}
           {result && (
-            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* Result header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                  <p className="text-sm font-semibold text-white">{t("promptResult")}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={handleCopy}>
-                    {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied ? t("promptCopied") : t("promptCopy")}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleReset}>
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    {t("promptNew")}
-                  </Button>
-                </div>
-              </div>
+            <div className="w-full flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-              {/* Result body — terminal style */}
-              <div className="rounded-2xl border border-white/10 bg-[#0d0d10] px-5 py-4">
-                <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap font-mono">
+              {/* Result card */}
+              <div className="w-full rounded-2xl bg-[#1c1c1e] px-5 py-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+                    {t("promptResult")}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className="flex items-center gap-1.5 rounded-full bg-[#2c2c2e] px-3 py-1.5 text-xs text-white/60 hover:text-white transition-colors"
+                    >
+                      {copied
+                        ? <Check className="h-3.5 w-3.5 text-green-400" />
+                        : <Copy className="h-3.5 w-3.5" />
+                      }
+                      {copied ? t("promptCopied") : t("promptCopy")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="flex items-center gap-1.5 rounded-full bg-[#2c2c2e] px-3 py-1.5 text-xs text-white/60 hover:text-white transition-colors"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      {t("promptNew")}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
                   {result}
                 </p>
               </div>
 
-              {/* Language note */}
-              <p className="text-xs text-white/30 text-center">{t("promptResultNote")}</p>
-
-              {/* CTA buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              {/* Use in links */}
+              <p className="text-xs text-white/30 text-center">{t("promptUseIn")}</p>
+              <div className="grid grid-cols-2 gap-3">
                 <a
                   href="/create/image"
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm font-semibold text-white hover:bg-white/10 transition-all"
+                  className="flex items-center justify-center gap-2 rounded-full bg-[#1c1c1e] py-3 text-sm font-medium text-white/60 hover:text-white hover:bg-[#2c2c2e] transition-all"
                 >
-                  <Sparkles className="h-4 w-4 text-primary-light" />
+                  <ImageIcon className="h-4 w-4" />
                   {t("promptGoImage")}
-                  <ArrowRight className="h-3.5 w-3.5 opacity-40 ml-auto" />
                 </a>
                 <a
                   href="/create/video"
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3.5 text-sm font-semibold text-primary-light hover:bg-primary/20 transition-all"
+                  className="flex items-center justify-center gap-2 rounded-full bg-[#7c3aed] py-3 text-sm font-semibold text-white hover:bg-[#6d28d9] transition-all"
                 >
                   <Zap className="h-4 w-4" />
                   {t("promptGoVideo")}
-                  <ArrowRight className="h-3.5 w-3.5 opacity-40 ml-auto" />
                 </a>
               </div>
             </div>
@@ -364,6 +364,16 @@ export default function QuickPromptPage() {
 
         </div>
       </div>
+
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 pointer-events-none">
+          <div className="rounded-3xl border-2 border-dashed border-white/30 bg-[#1c1c1e]/90 px-12 py-8 flex flex-col items-center gap-3">
+            <Plus className="h-10 w-10 text-white/40" />
+            <p className="text-white/60 text-sm">{t("promptDropDragging")}</p>
+          </div>
+        </div>
+      )}
 
       {/* Hidden file input */}
       <input

@@ -144,11 +144,13 @@ export async function POST(req: NextRequest) {
         ? "The user has attached a reference image. Analyze its subject, environment, lighting, and mood to enrich the description."
         : null,
       "Your ONLY task: convert the user's raw idea into a clean, natural 1-2 sentence visual description in English.",
-      "Describe ONLY: the subject, setting, lighting, and mood.",
+      "Describe the subject, ANY ACTIONS OR MOVEMENT (crucial), setting, lighting, and mood.",
+      "CRITICAL: Never drop key verbs (like spilling, jumping, flying). If the user describes a dynamic action, you MUST preserve it accurately.",
       "Do NOT add style, camera specs, quality keywords, or negative prompts — those are handled by a separate backend layer.",
       "Return ONLY the clean description. No explanations, no headers, no formatting.",
       context ? `Context clues (aspect/tone): ${context}` : null,
     ].filter(Boolean).join(" ");
+
 
     let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
     try {

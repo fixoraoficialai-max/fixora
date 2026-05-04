@@ -78,7 +78,10 @@ export async function POST(req: NextRequest) {
       },
     }) as unknown as FluxResult;
 
-    const imageUrl = result.images[0]?.url;
+    // Extract the result safely — Fal.ai SDK might return { data: { images: ... } } or { images: ... }
+    const resData  = (result as any).data ?? result;
+    const imageUrl = resData?.images?.[0]?.url;
+    
     if (!imageUrl) throw new Error("No image URL in Fal.ai response");
 
     // 7. Persist to history — non-critical: isolated so any DB issue never

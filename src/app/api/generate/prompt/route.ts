@@ -41,7 +41,7 @@ const schema = z.object({
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PROMPT_CREDIT_COST = 1;
-const MODEL = "claude-haiku-4-5-20251001";
+const MODEL = "claude-haiku-4-5";
 
 // Estilos que requieren etiquetas adicionales en post-proceso
 const DIAGRAM_STYLES = new Set(["corte-transversal", "infografia"]);

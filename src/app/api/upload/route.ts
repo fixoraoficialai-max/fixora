@@ -148,7 +148,8 @@ export async function POST(req: NextRequest) {
     const fileUrl = await fal.storage.upload(cleanFile);
 
     return apiSuccess({ fileUrl, isVideo });
-  } catch {
+  } catch (err) {
+    console.error("[upload] Error during file processing/upload:", err);
     return ApiErrors.internal();
   }
 }

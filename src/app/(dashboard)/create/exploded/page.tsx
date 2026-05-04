@@ -38,24 +38,23 @@ export default function ExplodedPage() {
   async function uploadAndDetect(file: File) {
     setPhase("uploading");
     try {
-      // 1. Upload
-      const form = new FormData();
-      form.append("file", file);
-      const uploadRes  = await fetch("/api/upload", { method: "POST", body: form });
-      const uploadData = await uploadRes.json() as { success: boolean; data?: { fileUrl: string } };
-      if (!uploadData.success || !uploadData.data?.fileUrl) throw new Error("Error al subir imagen");
-      const url = uploadData.data.fileUrl;
-      setImageUrl(url);
+      // Convert image to base64 directly in the browser — no Fal storage needed
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const mediaType = file.type.includes("png") ? "image/png" : file.type.includes("webp") ? "image/webp" : "image/jpeg";
+      setImageUrl(preview); // keep local preview as reference
 
-      // 2. Detect components
+      // Detect components via Claude
       setPhase("detecting");
       const detectRes  = await fetch("/api/exploded/detect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: url }),
+        body: JSON.stringify({ imageBase64: base64, mediaType }),
       });
-      const detectData = await detectRes.json() as { success: boolean; data?: { components: Component[] } };
-      if (!detectData.success || !detectData.data?.components) throw new Error("Error al detectar componentes");
+      const detectData = await detectRes.json() as { success: boolean; data?: { components: Component[] }; error?: { message: string } };
+      if (!detectData.success || !detectData.data?.components) {
+        throw new Error(detectData.error?.message ?? "Error al detectar componentes");
+      }
       setComponents(detectData.data.components);
       setPhase("done");
     } catch (err) {

@@ -5,7 +5,13 @@ import { auth } from "@/lib/auth/config";
 import { ApiErrors, apiSuccess } from "@/lib/api/response";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
 
-const schema = z.object({ imageUrl: z.string().url() });
+const schema = z.union([
+  z.object({
+    imageBase64: z.string().min(1),
+    mediaType:   z.enum(["image/jpeg", "image/png", "image/webp"]).default("image/jpeg"),
+  }),
+  z.object({ imageUrl: z.string().url() }),
+]);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 async function fetchImageAsBase64(
@@ -35,11 +41,22 @@ export async function POST(req: NextRequest) {
     const parsed = schema.safeParse(body);
     if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
 
-    const { imageUrl } = parsed.data;
-    const { data: imageData, mediaType } = await fetchImageAsBase64(imageUrl);
+    let imageData: string;
+    let mediaType: "image/jpeg" | "image/png" | "image/webp";
+
+    if ("imageBase64" in parsed.data) {
+      // Direct base64 from client — no Fal storage required
+      imageData = parsed.data.imageBase64;
+      mediaType = parsed.data.mediaType;
+    } else {
+      // Legacy: fetch from URL
+      const fetched = await fetchImageAsBase64(parsed.data.imageUrl);
+      imageData = fetched.data;
+      mediaType = fetched.mediaType;
+    }
 
     const message = await anthropic.messages.create({
-      model:      "claude-haiku-4-5-20251001",
+      model:      "claude-haiku-4-5",
       max_tokens: 600,
       system: `You are a product analyst. Analyze the product in the image and identify its main components.
 Return ONLY a valid JSON array with this format (no markdown, no explanation):

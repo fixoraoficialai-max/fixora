@@ -7,6 +7,7 @@
  */
 
 export const PROMPT_STYLES = [
+  "Realista",
   "Cinematic",
   "Documentary",
   "Anime",

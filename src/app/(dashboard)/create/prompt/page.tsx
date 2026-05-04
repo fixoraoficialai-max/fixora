@@ -17,6 +17,7 @@ import {
   Zap,
   Circle,
   Eye,
+  Camera,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { TopBar } from "@/components/layout/TopBar";
@@ -34,6 +35,7 @@ import {
 import { PROMPT_STYLES } from "@/lib/prompt-constants";
 
 const STYLE_ICONS: Record<string, React.ReactNode> = {
+  Realista:       <Camera className="h-3.5 w-3.5" />,
   Cinematic:      <Clapperboard className="h-3.5 w-3.5" />,
   Documentary:    <Eye className="h-3.5 w-3.5" />,
   Anime:          <Circle className="h-3.5 w-3.5" />,

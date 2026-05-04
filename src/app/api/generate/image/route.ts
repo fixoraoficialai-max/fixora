@@ -10,22 +10,65 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const IMAGE_CREDITS = 3;
-const FAL_MODEL     = "fal-ai/flux-pro/v1.1" as const;
+const FAL_MODEL = "fal-ai/flux-pro/v1.1" as const;
 
-// Maps our internal AspectRatio enum to Fal.ai FLUX image_size values.
 type FluxImageSize = "portrait_16_9" | "landscape_16_9" | "square_hd";
 
 const ASPECT_SIZE_MAP: Record<string, FluxImageSize> = {
-  PORTRAIT:  "portrait_16_9",   // 9:16 vertical
-  LANDSCAPE: "landscape_16_9",  // 16:9 horizontal
-  SQUARE:    "square_hd",       // 1:1
+  PORTRAIT: "portrait_16_9",
+  LANDSCAPE: "landscape_16_9",
+  SQUARE: "square_hd",
 };
+
+/**
+ * Parámetros óptimos de Flux 1.1 Pro por tipo de imagen.
+ *
+ * guidance_scale: controla cuánto sigue el modelo el prompt.
+ *   - Fotorrealismo: 3.0–3.5 (más natural, menos forzado)
+ *   - Ilustración/Arte: 4.0–5.0 (más fiel al estilo)
+ *   - Diagramas: 5.0–6.0 (máxima fidelidad al prompt)
+ *
+ * num_inference_steps: más pasos = más detalle, más lento y costoso.
+ *   - Rápido/borrador: 20
+ *   - Producción estándar: 28
+ *   - Máxima calidad: 35
+ *
+ * safety_tolerance: 2 = balance seguridad/creatividad para usuarios adultos.
+ */
+const FLUX_PARAMS_BY_STYLE: Record<string, { guidance_scale: number; num_inference_steps: number }> = {
+  "hiperrealista": { guidance_scale: 3.0, num_inference_steps: 28 },
+  "mejora-fotos": { guidance_scale: 3.0, num_inference_steps: 28 },
+  "producto": { guidance_scale: 3.5, num_inference_steps: 28 },
+  "interiores": { guidance_scale: 3.5, num_inference_steps: 28 },
+  "paisaje": { guidance_scale: 3.5, num_inference_steps: 28 },
+  "estatua": { guidance_scale: 3.5, num_inference_steps: 28 },
+  "3d-pixar": { guidance_scale: 4.5, num_inference_steps: 28 },
+  "avatar-3d": { guidance_scale: 4.5, num_inference_steps: 28 },
+  "mini-yo": { guidance_scale: 4.5, num_inference_steps: 28 },
+  "comic": { guidance_scale: 4.5, num_inference_steps: 28 },
+  "chibi": { guidance_scale: 4.5, num_inference_steps: 28 },
+  "fantasia": { guidance_scale: 5.0, num_inference_steps: 28 },
+  "dark-fantasy": { guidance_scale: 5.0, num_inference_steps: 28 },
+  "surrealista": { guidance_scale: 5.0, num_inference_steps: 28 },
+  "vintage": { guidance_scale: 5.0, num_inference_steps: 28 },
+  "acuarela": { guidance_scale: 5.0, num_inference_steps: 28 },
+  "espacio": { guidance_scale: 5.0, num_inference_steps: 28 },
+  "maquillaje": { guidance_scale: 4.0, num_inference_steps: 28 },
+  // Diagramas: máxima fidelidad al prompt — necesitan seguir instrucciones al pie de la letra
+  "corte-transversal": { guidance_scale: 6.0, num_inference_steps: 35 },
+  "infografia": { guidance_scale: 6.0, num_inference_steps: 35 },
+};
+
+const DEFAULT_FLUX_PARAMS = { guidance_scale: 3.5, num_inference_steps: 28 };
 
 // ─── Input validation ─────────────────────────────────────────────────────────
 
 const schema = z.object({
-  prompt:      z.string().min(5, "Prompt too short").max(3000, "Prompt too long").trim(),
+  prompt: z.string().min(5).max(3000).trim(),
+  negativePrompt: z.string().max(1000).trim().optional(), // ← NUEVO: viene del prompt route
   aspectRatio: z.enum(["LANDSCAPE", "PORTRAIT", "SQUARE"]).default("PORTRAIT"),
+  styleId: z.string().optional(),                  // ← NUEVO: para seleccionar parámetros óptimos
+  needsTextOverlay: z.boolean().optional(),                // ← NUEVO: flag para diagramas
 });
 
 type FluxResult = { images: Array<{ url: string }> };
@@ -37,74 +80,87 @@ export async function POST(req: NextRequest) {
   let creditReserved = false;
 
   try {
-    // 1. Authentication
+    // 1. Autenticación
     const session = await auth();
     if (!session?.user?.id) return ApiErrors.unauthorized();
     userId = session.user.id;
 
-    // 2. Rate limit — 10 image generations/min per user
+    // 2. Rate limit
     if (!(await checkRateLimit(`image:${userId}`, RATE_LIMITS.image))) {
       return ApiErrors.tooManyRequests();
     }
 
     // 3. Parse body
     let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return ApiErrors.validation({ message: "Invalid JSON body" });
-    }
+    try { body = await req.json(); }
+    catch { return ApiErrors.validation({ message: "Invalid JSON body" }); }
 
-    // 4. Validate — Zod guards every field before backend logic runs
+    // 4. Validación
     const parsed = schema.safeParse(body);
     if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
 
-    const { prompt, aspectRatio } = parsed.data;
+    const { prompt, negativePrompt, aspectRatio, styleId, needsTextOverlay } = parsed.data;
 
-    // 5. Atomic credit reservation — prevents race conditions
+    // 5. Reserva atómica de créditos
     const reserved = await reserveCredits(userId, IMAGE_CREDITS);
     if (!reserved) return ApiErrors.insufficientCredits();
     creditReserved = true;
 
-    // 6. Configure and call Fal.ai
+    // 6. Seleccionar parámetros óptimos según estilo
+    const fluxParams = styleId
+      ? (FLUX_PARAMS_BY_STYLE[styleId] ?? DEFAULT_FLUX_PARAMS)
+      : DEFAULT_FLUX_PARAMS;
+
+    // 7. Llamada a Fal.ai con todos los parámetros correctos
     configureFal();
 
-    const result = await fal.run(FAL_MODEL, {
-      input: {
-        prompt,
-        image_size:    ASPECT_SIZE_MAP[aspectRatio],
-        num_images:    1,
-        output_format: "jpeg",
-      },
-    }) as unknown as FluxResult;
+    // Construir el input con spread condicional — mantiene el tipado estricto de FluxProV11Input
+    const falInput = {
+      prompt,
+      image_size: ASPECT_SIZE_MAP[aspectRatio],
+      num_images: 1,
+      output_format: "jpeg" as const,
+      guidance_scale: fluxParams.guidance_scale,
+      num_inference_steps: fluxParams.num_inference_steps,
+      // negative_prompt solo se incluye si existe
+      ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
+    };
 
-    // Extract the result safely — Fal.ai SDK might return { data: { images: ... } } or { images: ... }
-    const resData  = (result as any).data ?? result;
+    const result = await fal.run(FAL_MODEL, { input: falInput }) as unknown as FluxResult;
+
+    const resData = (result as any).data ?? result;
     const imageUrl = resData?.images?.[0]?.url;
-    
+
     if (!imageUrl) throw new Error("No image URL in Fal.ai response");
 
-    // 7. Persist to history — non-critical: isolated so any DB issue never
-    //    blocks the successful image response or triggers a credit refund.
+    // 8. Persistir en historial (no crítico)
     db.generatedImage.create({
-      data: { userId, prompt, imageUrl, sceneText: null },
+      data: {
+        userId,
+        prompt,
+        imageUrl,
+        sceneText: null,
+        // Guardar metadata útil para analytics futuros
+        ...(styleId ? { styleId } : {}),
+      },
     }).catch((dbErr: unknown) => {
-      console.error("[image/route] DB persist failed (non-critical):", dbErr instanceof Error ? dbErr.message : dbErr);
+      console.error(
+        "[image/route] DB persist failed (non-critical):",
+        dbErr instanceof Error ? dbErr.message : dbErr
+      );
     });
 
-    return apiSuccess({ imageUrl });
+    return apiSuccess({
+      imageUrl,
+      needsTextOverlay: needsTextOverlay ?? false, // ← El frontend decide si añadir etiquetas
+    });
 
   } catch (err) {
-    // Safety net — catches auth(), checkRateLimit(), reserveCredits(), or Fal.ai failures.
-    // Only release credits if they were successfully reserved before the failure.
     if (creditReserved && userId) {
       await releaseCredits(userId, IMAGE_CREDITS).catch(() => null);
     }
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[image/route] Error:", msg);
-    // Temporarily bubble up the exact error to the client for debugging
     return apiError("INTERNAL_ERROR", `DEBUG: ${msg}`, 500);
   }
 }
-
-

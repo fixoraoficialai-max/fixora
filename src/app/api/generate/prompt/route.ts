@@ -134,12 +134,13 @@ export async function POST(req: NextRequest) {
     const content = buildMessageContent(prompt, context, imageBase64, imageMediaType);
 
     const systemPrompt = [
-      "You are an expert AI video and image prompt engineer.",
+      "You are an expert AI image and video prompt engineer.",
       imageBase64
         ? "The user has provided a reference image. Analyze its visual style, composition, colors, lighting, and mood. Use these visual elements to make the prompt more precise and aligned with what the user wants."
         : null,
       "Transform the user's idea into a detailed cinematic prompt optimized for FLUX and Kling AI.",
-      "Write the prompt in English. Include: lighting style, composition, camera angle, atmosphere, and lens type.",
+      "IMPORTANT: Detect the language of the user's input and write the optimized prompt in THAT SAME LANGUAGE. If the user wrote in Spanish, respond in Spanish. If in English, respond in English. Never change the user's language.",
+      "Include: lighting style, composition, camera angle, atmosphere, and lens type.",
       "Keep the result under 200 words.",
       "Return ONLY the optimized prompt — no explanations, no headers, no formatting.",
     ].filter(Boolean).join(" ");

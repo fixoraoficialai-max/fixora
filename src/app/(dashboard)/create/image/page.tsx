@@ -48,7 +48,7 @@ interface GeneratedImage {
 
 function canvasAspectClass(ratio: AspectRatio): string {
   if (ratio === "PORTRAIT")  return "max-w-[200px] aspect-[9/16]";
-  if (ratio === "LANDSCAPE") return "w-full max-h-[260px] aspect-[16/9]";
+  if (ratio === "LANDSCAPE") return "max-w-[420px] aspect-[16/9]";
   return "max-w-[260px] aspect-square";
 }
 
@@ -85,12 +85,18 @@ export default function QuickImagePage() {
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setReferenceImage(file);
-      setReferencePreview(URL.createObjectURL(file));
+    if (!file) return;
+    if (!ACCEPTED_TYPES.has(file.type)) {
+      setError("Formato no soportado. Usa JPG, PNG o WebP.");
+      return;
     }
+    setReferenceImage(file);
+    setReferencePreview(URL.createObjectURL(file));
+    setError("");
   };
 
   async function handleGenerate(promptToUse?: string) {
@@ -168,7 +174,13 @@ export default function QuickImagePage() {
   }
 
   function handleReset() {
-    setDescription(""); setGeneratedImages([]); setError(""); setSelectedStyleId(null);
+    setDescription("");
+    setGeneratedImages([]);
+    setError("");
+    setSelectedStyleId(null);
+    if (referencePreview) URL.revokeObjectURL(referencePreview);
+    setReferenceImage(null);
+    setReferencePreview(null);
   }
 
   const firstImage  = generatedImages[0];
@@ -261,25 +273,27 @@ export default function QuickImagePage() {
 
       <div className="flex-shrink-0 px-4 py-2 border-t border-white/5 bg-[#070709] relative">
         <div className="mx-auto max-w-2xl flex flex-col gap-2">
-          {/* Fila de chips (estilo e imagen adjunta) */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {selectedStyleId && (
-              <div className="flex items-center gap-2 bg-[#1c1c1e] border border-white/10 rounded-full px-2.5 py-1">
-                <span className="text-[10px] text-white/30">Estilo:</span>
-                <span className="text-[10px] font-semibold text-primary/90 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                  {ALL_STYLES.find((s) => s.id === selectedStyleId)?.label}
-                </span>
-                <button type="button" onClick={() => setSelectedStyleId(null)} className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none">×</button>
-              </div>
-            )}
-            {referencePreview && (
-              <div className="flex items-center gap-2 bg-[#1c1c1e] border border-white/10 rounded-full pr-2.5 pl-1 py-1">
-                <img src={referencePreview} alt="Ref" className="h-4 w-4 object-cover rounded-full" />
-                <span className="text-[10px] text-white/30">Referencia adjunta</span>
-                <button type="button" onClick={() => { setReferenceImage(null); setReferencePreview(null); }} className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none">×</button>
-              </div>
-            )}
-          </div>
+          {/* Fila de chips: solo se renderiza cuando hay algo que mostrar — Bug 6 fix */}
+          {(selectedStyleId || referencePreview) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {selectedStyleId && (
+                <div className="flex items-center gap-2 bg-[#1c1c1e] border border-white/10 rounded-full px-2.5 py-1">
+                  <span className="text-[10px] text-white/30">Estilo:</span>
+                  <span className="text-[10px] font-semibold text-primary/90 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                    {ALL_STYLES.find((s) => s.id === selectedStyleId)?.label}
+                  </span>
+                  <button type="button" onClick={() => setSelectedStyleId(null)} className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none">×</button>
+                </div>
+              )}
+              {referencePreview && (
+                <div className="flex items-center gap-2 bg-[#1c1c1e] border border-white/10 rounded-full pr-2.5 pl-1 py-1">
+                  <img src={referencePreview} alt="Ref" className="h-4 w-4 object-cover rounded-full" />
+                  <span className="text-[10px] text-white/30">Referencia adjunta</span>
+                  <button type="button" onClick={() => { setReferenceImage(null); setReferencePreview(null); }} className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none">×</button>
+                </div>
+              )}
+            </div>
+          )}
           
           <div className="flex items-end gap-2 rounded-xl bg-[#1c1c1e] border border-white/10 px-3 py-2 focus-within:border-primary/50 transition-colors">
             <button 

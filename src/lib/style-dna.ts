@@ -57,7 +57,6 @@ export const STYLE_DNA: Record<StyleId, StyleDNA> = {
     material: "soft diffused lighting, natural skin tone preservation, flawless complexion, subtle highlight and shadow zones",
     quality: "high-fashion Vogue editorial quality, ultra-sharp focus on eyes and lips, magazine-ready finish",
     negatives: "ugly, deformed, disfigured, heavy retouching, plastic skin, distorted proportions, watermarks, text overlays, blurry, low quality, nsfw",
-    needsTextOverlay: true, // Las zonas de maquillaje se anotan en post-proceso
   },
 
   "hiperrealista": {

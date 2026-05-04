@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Download, Zap, Sparkles, RefreshCw, Wand2, ChevronRight, Plus } from "lucide-react";
+import { useState } from "react";
+
+import { Download, Zap, Sparkles, RefreshCw, Wand2, Plus } from "lucide-react";
+
 import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +36,8 @@ const ALL_SUGGESTIONS = [
   { id: "espacio",          label: "Espacio",                prompt: "An astronaut floating in deep space above a vibrant nebula, cinematic wide shot, photorealistic, epic cosmic atmosphere.", image: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=500&auto=format&fit=crop" },
 ] as const;
 
-const SUGGESTIONS_PAGE_SIZE = 5;
+
+
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string; desc: string }[] = [
   { value: "PORTRAIT",  label: "9:16", desc: "TikTok" },
@@ -70,23 +73,11 @@ function SmallCard({ label, image, onClick }: { label: string; image: string; on
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function QuickImagePage() {
-  const [description, setDescription]       = useState("");
-  const [aspectRatio, setAspectRatio]       = useState<AspectRatio>("PORTRAIT");
-  const [isGenerating, setIsGenerating]     = useState(false);
+  const [description, setDescription]         = useState("");
+  const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("PORTRAIT");
+  const [isGenerating, setIsGenerating]       = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
-  const [error, setError]                   = useState("");
-  const [suggestionPage, setSuggestionPage] = useState(0);
-
-  const scrollRef   = useRef<HTMLDivElement>(null);
-  const totalPages  = Math.ceil(ALL_SUGGESTIONS.length / SUGGESTIONS_PAGE_SIZE);
-  const visibleSuggestions = ALL_SUGGESTIONS.slice(
-    suggestionPage * SUGGESTIONS_PAGE_SIZE,
-    suggestionPage * SUGGESTIONS_PAGE_SIZE + SUGGESTIONS_PAGE_SIZE,
-  );
-
-  function advanceSuggestions() {
-    setSuggestionPage((p) => (p + 1) % totalPages);
-  }
+  const [error, setError]                     = useState("");
 
   async function handleGenerate(promptToUse?: string) {
     const finalPrompt = promptToUse ?? description;
@@ -225,34 +216,26 @@ export default function QuickImagePage() {
             <p className="text-sm text-red-400 text-center">{error}</p>
           )}
 
-          {/* ── Explorar ideas — smaller cards with Novedades ── */}
+          {/* ── Explorar ideas — scroll nativo, 2 filas en móvil / 1 fila en desktop ── */}
           {showExplore && (
             <div className="flex flex-col gap-3 pb-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">Explorar ideas</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/20">{suggestionPage + 1}/{totalPages}</span>
-                  <button
-                    onClick={advanceSuggestions}
-                    className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors px-2 py-1 rounded-full hover:bg-white/5"
-                  >
-                    Novedades
-                    <ChevronRight className="h-3 w-3" />
-                  </button>
+              <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">Explorar ideas</h2>
+
+              {/* Mobile: 2 rows | Desktop: 1 row */}
+              <div className="overflow-x-auto no-scrollbar">
+                <div className="grid grid-rows-2 grid-flow-col auto-cols-max gap-x-3 gap-y-2 md:flex md:flex-row md:gap-3">
+                  {ALL_SUGGESTIONS.map((s) => (
+                    <SmallCard
+                      key={s.id}
+                      label={s.label}
+                      image={s.image}
+                      onClick={() => {
+                        setDescription(s.prompt);
+                        handleGenerate(s.prompt);
+                      }}
+                    />
+                  ))}
                 </div>
-              </div>
-              <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                {visibleSuggestions.map((s) => (
-                  <SmallCard
-                    key={s.id}
-                    label={s.label}
-                    image={s.image}
-                    onClick={() => {
-                      setDescription(s.prompt);
-                      handleGenerate(s.prompt);
-                    }}
-                  />
-                ))}
               </div>
             </div>
           )}

@@ -24,14 +24,14 @@ import { STYLE_IDS, assemblePrompt } from "@/lib/style-dna";
 const schema = z.object({
   prompt: z
     .string()
-    .min(5,    "Prompt muy corto — escribe al menos 5 caracteres")
+    .min(5, "Prompt muy corto — escribe al menos 5 caracteres")
     .max(2000, "Prompt muy largo — máximo 2000 caracteres")
     .trim(),
-  style:       z.enum(PROMPT_STYLES).optional(),
-  tone:        z.enum(PROMPT_TONES).optional(),
+  style: z.enum(PROMPT_STYLES).optional(),
+  tone: z.enum(PROMPT_TONES).optional(),
   aspectRatio: z.enum(["PORTRAIT", "LANDSCAPE", "SQUARE"]).optional(),
   /** Style card ID from the image page. Validated server-side against the allowlist. */
-  styleId:     z.enum([...STYLE_IDS] as [string, ...string[]]).optional(),
+  styleId: z.enum([...STYLE_IDS] as [string, ...string[]]).optional(),
   imageBase64: z.string()
     .refine(
       (val) => ACCEPTED_IMAGE_PREFIXES.some((prefix) => val.startsWith(prefix)),
@@ -144,21 +144,19 @@ export async function POST(req: NextRequest) {
         ? "The user has attached a reference image. Analyze its subject, environment, lighting, and mood to enrich the description."
         : null,
       "Your ONLY task: convert the user's raw idea into a clean, natural 1-2 sentence visual description in English.",
-      "Describe the subject, ANY ACTIONS OR MOVEMENT (crucial), setting, lighting, and mood.",
-      "CRITICAL: Never drop key verbs (like spilling, jumping, flying). If the user describes a dynamic action, you MUST preserve it accurately.",
+      "Describe ONLY: the subject, setting, lighting, and mood.",
       "Do NOT add style, camera specs, quality keywords, or negative prompts — those are handled by a separate backend layer.",
       "Return ONLY the clean description. No explanations, no headers, no formatting.",
       context ? `Context clues (aspect/tone): ${context}` : null,
     ].filter(Boolean).join(" ");
 
-
     let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
     try {
       message = await anthropic.messages.create({
-        model:      MODEL,
+        model: MODEL,
         max_tokens: 200,
-        system:     systemPrompt,
-        messages:   [{ role: "user", content }],
+        system: systemPrompt,
+        messages: [{ role: "user", content }],
       });
     } catch (err) {
       await releaseCredits(userId, PROMPT_CREDIT_COST);
@@ -166,7 +164,7 @@ export async function POST(req: NextRequest) {
       return ApiErrors.internal();
     }
 
-    const block      = message.content[0];
+    const block = message.content[0];
     const cleanIntent = block?.type === "text" ? block.text.trim() : prompt;
 
     // ── Layer 2: Backend assembler injects Style DNA deterministically ─────────

@@ -81,9 +81,11 @@ export async function POST(req: NextRequest) {
     });
 
     return apiSuccess({ imageUrl });
-  } catch {
+  } catch (err) {
     // Fal.ai or DB failed AFTER credits were reserved — return them immediately
     await releaseCredits(userId, IMAGE_CREDITS).catch(() => null);
+    console.error("[image/route] Fal.ai generation error:", err instanceof Error ? err.message : err);
     return ApiErrors.internal();
   }
+
 }

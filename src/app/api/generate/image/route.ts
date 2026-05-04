@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     const result = await fal.run(FAL_MODEL, {
       input: {
         prompt,
-        image_size:             ASPECT_SIZE_MAP[aspectRatio],
+        image_size:    ASPECT_SIZE_MAP[aspectRatio],
         num_images:    1,
         output_format: "jpeg",
       },
@@ -75,17 +75,22 @@ export async function POST(req: NextRequest) {
     const imageUrl = result.images[0]?.url;
     if (!imageUrl) throw new Error("No image URL in Fal.ai response");
 
-    // Persist to history (non-critical — don't fail the request if DB is slow)
-    await db.generatedImage.create({
+    // Persist to history — non-critical: isolated so any DB issue never
+    // rolls back credits or blocks the successful image response.
+    db.generatedImage.create({
       data: { userId, prompt, imageUrl, sceneText: null },
+    }).catch((dbErr: unknown) => {
+      console.error("[image/route] DB persist failed (non-critical):", dbErr instanceof Error ? dbErr.message : dbErr);
     });
 
     return apiSuccess({ imageUrl });
+
   } catch (err) {
-    // Fal.ai or DB failed AFTER credits were reserved — return them immediately
+    // Only Fal.ai failures reach here — release credits
     await releaseCredits(userId, IMAGE_CREDITS).catch(() => null);
     console.error("[image/route] Fal.ai generation error:", err instanceof Error ? err.message : err);
     return ApiErrors.internal();
   }
+
 
 }

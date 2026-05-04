@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback } from "react";
 import {
   Plus,
-  Send,
   Copy,
   Check,
   RefreshCw,
@@ -202,7 +201,7 @@ export default function QuickPromptPage() {
           </h1>
 
           {/* ── Input box ────────────────────────────────────────────────── */}
-          <div className="w-full rounded-2xl bg-[#1c1c1e] px-5 pt-4 pb-3 flex flex-col gap-3">
+          <div className="w-full rounded-2xl bg-[#1c1c1e] border border-white/10 px-5 pt-4 pb-3 flex flex-col gap-3">
 
             {/* Image preview thumbnail */}
             {imagePreview && (
@@ -233,25 +232,14 @@ export default function QuickPromptPage() {
               className="w-full resize-none bg-transparent text-white/90 placeholder:text-white/25 text-base leading-relaxed outline-none"
             />
 
-            {/* Bottom row: + and send */}
-            <div className="flex items-center justify-end gap-2">
+            {/* Bottom row: + attach only */}
+            <div className="flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-[#2c2c2e] text-white/50 hover:text-white/80 transition-colors"
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-[#2c2c2e] border border-white/10 text-white/50 hover:text-white/80 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={input.trim().length < 5 || isLoading}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-[#2c2c2e] text-white/50 hover:text-white/80 disabled:opacity-30 transition-colors"
-              >
-                {isLoading
-                  ? <RefreshCw className="h-4 w-4 animate-spin" />
-                  : <Send className="h-4 w-4" />
-                }
               </button>
             </div>
           </div>
@@ -264,10 +252,10 @@ export default function QuickPromptPage() {
                 type="button"
                 onClick={() => setStyle(style === s ? "" : s)}
                 className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all",
+                  "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all border",
                   style === s
-                    ? "bg-[#3a3a3c] text-white ring-1 ring-white/20"
-                    : "bg-[#1c1c1e] text-white/50 hover:bg-[#2c2c2e] hover:text-white/70"
+                    ? "bg-[#3a3a3c] text-white border-white/25"
+                    : "bg-[#1c1c1e] text-white/50 border-white/10 hover:bg-[#2c2c2e] hover:text-white/70 hover:border-white/20"
                 )}
               >
                 <span className="opacity-60">{STYLE_ICONS[s]}</span>

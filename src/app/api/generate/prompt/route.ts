@@ -15,6 +15,12 @@ import {
 import { STYLE_IDS, assemblePrompt } from "@/lib/style-dna";
 import type { DiagramLabel } from "@/components/DiagramOverlay";
 
+// Force dynamic — the OpenAI client reads OPENAI_API_KEY at runtime.
+// Without this, Next.js tries to statically optimize this route during build,
+// failing because env vars are not available at build time on Vercel.
+export const dynamic = "force-dynamic";
+
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PROMPT_CREDIT_COST = 1;

@@ -56,12 +56,7 @@ const schema = z.object({
   imageMediaType: z.enum(ACCEPTED_IMAGE_TYPES).optional(),
 });
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface DiagramClaudeResponse {
-  description: string;
-  labels:      DiagramLabel[];
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -87,7 +82,7 @@ function buildSystemPrompt(hasImage: boolean, styleId?: string, context?: string
       "",
       "Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):",
       `{
-  "description": "One sentence describing the subject to illustrate in English. No text or labels.",
+  "description": "One sentence describing the subject to illustrate in English. The image must contain NO text, no labels, no letters, no callouts, no typography inside the image.",
   "labels": [
     {
       "text": "Label name in Spanish",
@@ -104,6 +99,7 @@ function buildSystemPrompt(hasImage: boolean, styleId?: string, context?: string
       "- Estimate realistic positions based on how the subject typically looks in a cross-section.",
       "- Place 2-3 labels on the left side (anchorX < 0.5) and 2-4 on the right (anchorX >= 0.5).",
       "- Avoid placing labels at exactly 0.5 horizontally — they must be clearly left or right.",
+      "CRITICAL: The description field must never mention text, labels, or annotations. The image Flux generates must be purely visual.",
       context ? `Context: ${context}` : null,
     ].filter(Boolean).join("\n");
   }
@@ -144,10 +140,21 @@ function buildMessageContent(
   ];
 }
 
-function parseDiagramResponse(rawText: string): DiagramClaudeResponse | null {
+// Rename: DiagramClaudeResponse → DiagramAIResponse (model-agnostic naming)
+interface DiagramAIResponse {
+  description: string;
+  labels:      DiagramLabel[];
+}
+
+const DIAGRAM_TYPE_MAP: Record<string, string> = {
+  "corte-transversal": "cross_section",
+  "infografia":        "infographic",
+};
+
+function parseDiagramResponse(rawText: string): DiagramAIResponse | null {
   try {
     const clean  = rawText.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean) as DiagramClaudeResponse;
+    const parsed = JSON.parse(clean) as DiagramAIResponse;
 
     if (typeof parsed.description !== "string" || !Array.isArray(parsed.labels)) {
       return null;
@@ -227,8 +234,8 @@ export async function POST(req: NextRequest) {
 
     // ── Stage 2: Parse response depending on mode ─────────────────────────────
 
-    let cleanIntent:  string;
-    let diagramLabels: DiagramLabel[] | undefined;
+    let cleanIntent: string;
+    let diagramLabels: DiagramLabel[] = []; // always present — [] for non-diagram styles
 
     if (isDiagram) {
       const diagramData = parseDiagramResponse(rawText);
@@ -237,8 +244,8 @@ export async function POST(req: NextRequest) {
         diagramLabels = diagramData.labels;
       } else {
         console.warn("[prompt/route] Diagram JSON parse failed — using raw text as fallback");
-        cleanIntent   = rawText;
-        diagramLabels = [];
+        cleanIntent = rawText;
+        // diagramLabels stays []
       }
     } else {
       cleanIntent = rawText;
@@ -246,7 +253,8 @@ export async function POST(req: NextRequest) {
 
     // ── Stage 3: Style DNA injects art direction ───────────────────────────────
 
-    const assembled = assemblePrompt(cleanIntent, styleId);
+    const assembled    = assemblePrompt(cleanIntent, styleId);
+    const diagramType  = (styleId && DIAGRAM_TYPE_MAP[styleId]) ?? null;
 
     return apiSuccess({
       original:         prompt,
@@ -255,7 +263,8 @@ export async function POST(req: NextRequest) {
       negativePrompt:   assembled.negativePrompt,
       needsTextOverlay: assembled.needsTextOverlay,
       styleName:        assembled.styleName,
-      ...(diagramLabels !== undefined ? { diagramLabels } : {}),
+      diagramLabels,           // always present — [] when not a diagram
+      diagramType,             // "cross_section" | "infographic" | null
     });
 
   } catch (err) {

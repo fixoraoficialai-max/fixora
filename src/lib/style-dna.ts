@@ -76,10 +76,10 @@ export const STYLE_DNA: Record<StyleId, StyleDNA> = {
   },
   "corte-transversal": {
     name:      "Corte Transversal",
-    base:      "clean educational diagram, pure white background, frontal orthographic technical view",
-    material:  "color-coded cross-sectional layers, precise clean line art, clear label callouts with leader lines",
-    quality:   "scientific textbook illustration standard, museum exhibit quality, anatomically accurate",
-    negatives: "no artistic style, no 3D shadows, no decorative elements, no dark background",
+    base:      "clean educational diagram, pure white background, frontal orthographic technical view, MUST include legible Spanish text labels with leader lines pointing to internal parts",
+    material:  "color-coded cross-sectional layers, precise clean line art, high-contrast typography for text labels",
+    quality:   "scientific textbook illustration standard, museum exhibit quality, anatomically accurate, highly legible text",
+    negatives: "no artistic style, no 3D shadows, no decorative elements, no dark background, no gibberish text",
   },
   "estatua": {
     name:      "Estatua",
@@ -139,10 +139,10 @@ export const STYLE_DNA: Record<StyleId, StyleDNA> = {
   },
   "infografia": {
     name:      "Infografía animal",
-    base:      "dark professional background, centered subject with clearly separated diagram elements",
-    material:  "precise scientific illustration style, clean anatomical label lines, color-coded zones",
-    quality:   "Nature magazine or museum exhibit quality, educational poster standard, scientifically accurate",
-    negatives: "no artistic liberties, no cartoon style, no inaccurate proportions",
+    base:      "professional infographic layout, centered subject, MUST include legible Spanish text labels pointing to anatomy parts",
+    material:  "precise scientific illustration style, clean anatomical leader lines, high-contrast typography",
+    quality:   "Nature magazine educational poster standard, scientifically accurate, perfectly legible text",
+    negatives: "no artistic liberties, no cartoon style, no inaccurate proportions, no gibberish text",
   },
   "vintage": {
     name:      "Póster vintage",

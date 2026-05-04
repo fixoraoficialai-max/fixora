@@ -1,87 +1,167 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, Sparkles, RefreshCw, Zap, ChevronRight } from "lucide-react";
+import { Upload, Sparkles, RefreshCw } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
-import { cn } from "@/lib/utils";
 
-type Phase = "idle" | "uploading" | "detecting" | "done" | "error";
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-interface Component {
-  name: string;
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+type AcceptedMimeType = (typeof ACCEPTED_MIME_TYPES)[number];
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Phase = "idle" | "converting" | "detecting" | "done" | "error";
+
+interface ProductComponent {
+  name:        string;
   description: string;
 }
 
-export default function ExplodedPage() {
-  const [phase, setPhase]             = useState<Phase>("idle");
-  const [preview, setPreview]         = useState<string | null>(null);
-  const [imageUrl, setImageUrl]       = useState<string | null>(null);
-  const [components, setComponents]   = useState<Component[]>([]);
-  const [error, setError]             = useState("");
-  const inputRef                      = useRef<HTMLInputElement>(null);
+interface DetectApiResponse {
+  success: boolean;
+  data?:   { components: ProductComponent[] };
+  error?:  { message: string };
+}
 
-  function handleFile(file: File) {
-    if (!file.type.startsWith("image/")) { setError("Solo se aceptan imágenes"); return; }
-    if (file.size > 20 * 1024 * 1024)   { setError("Máximo 20MB"); return; }
-    setError("");
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
-    uploadAndDetect(file);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Encodes an ArrayBuffer to a base64 string safely for any file size.
+ *
+ * WHY: The naive `btoa(String.fromCharCode(...new Uint8Array(buf)))` uses a
+ * spread operator that places every byte as a function argument. JS engines
+ * cap the call-stack argument count, so this throws "Maximum call stack size
+ * exceeded" on images larger than ~1 MB. Chunking avoids that limit entirely.
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes     = new Uint8Array(buffer);
+  const chunkSize = 8_192;
+  let   binary    = "";
+
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
   }
 
-  function handleDrop(e: React.DragEvent) {
+  return btoa(binary);
+}
+
+function resolveMimeType(rawType: string): AcceptedMimeType {
+  if (rawType === "image/png")  return "image/png";
+  if (rawType === "image/webp") return "image/webp";
+  return "image/jpeg";
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ExplodedPage() {
+  const [phase,      setPhase]      = useState<Phase>("idle");
+  const [preview,    setPreview]    = useState<string | null>(null);
+  const [components, setComponents] = useState<ProductComponent[]>([]);
+  const [error,      setError]      = useState("");
+  const inputRef                    = useRef<HTMLInputElement>(null);
+
+  // ── Validation ──────────────────────────────────────────────────────────────
+
+  function validateFile(file: File): string | null {
+    if (!ACCEPTED_MIME_TYPES.includes(file.type as AcceptedMimeType)) {
+      return "Solo se aceptan imágenes JPG, PNG o WEBP";
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return "El archivo supera el límite de 20 MB";
+    }
+    return null;
+  }
+
+  // ── Entry points ────────────────────────────────────────────────────────────
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>): void {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  }
+
+  function handleDrop(e: React.DragEvent): void {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    if (file) processFile(file);
   }
 
-  async function uploadAndDetect(file: File) {
-    setPhase("uploading");
-    try {
-      // Convert image to base64 directly in the browser — no Fal storage needed
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      const mediaType = file.type.includes("png") ? "image/png" : file.type.includes("webp") ? "image/webp" : "image/jpeg";
-      setImageUrl(preview); // keep local preview as reference
+  function processFile(file: File): void {
+    const validationError = validateFile(file);
+    if (validationError) { setError(validationError); return; }
 
-      // Detect components via Claude
+    setError("");
+    setPreview(URL.createObjectURL(file));
+    void runDetectionPipeline(file);
+  }
+
+  // ── Detection pipeline ──────────────────────────────────────────────────────
+
+  async function runDetectionPipeline(file: File): Promise<void> {
+    setPhase("converting");
+    try {
+      // Convert to base64 on the client — no Fal storage dependency
+      const buffer    = await file.arrayBuffer();
+      const base64    = arrayBufferToBase64(buffer);
+      const mediaType = resolveMimeType(file.type);
+
       setPhase("detecting");
-      const detectRes  = await fetch("/api/exploded/detect", {
-        method: "POST",
+
+      const res  = await fetch("/api/exploded/detect", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, mediaType }),
+        body:    JSON.stringify({ imageBase64: base64, mediaType }),
       });
-      const detectData = await detectRes.json() as { success: boolean; data?: { components: Component[] }; error?: { message: string } };
-      if (!detectData.success || !detectData.data?.components) {
-        throw new Error(detectData.error?.message ?? "Error al detectar componentes");
+
+      const json = await res.json() as DetectApiResponse;
+
+      if (!json.success || !json.data?.components) {
+        throw new Error(json.error?.message ?? "Error al detectar componentes");
       }
-      setComponents(detectData.data.components);
+
+      setComponents(json.data.components);
       setPhase("done");
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
       setPhase("error");
     }
   }
 
-  function reset() {
+  // ── Reset ───────────────────────────────────────────────────────────────────
+
+  function reset(): void {
     setPhase("idle");
     setPreview(null);
-    setImageUrl(null);
     setComponents([]);
     setError("");
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  const isProcessing = phase === "uploading" || phase === "detecting";
+  // ── Derived state ───────────────────────────────────────────────────────────
+
+  const isProcessing = phase === "converting" || phase === "detecting";
+
+  const statusLabel: Record<"converting" | "detecting", string> = {
+    converting: "Procesando imagen...",
+    detecting:  "Detectando componentes...",
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full bg-[#070709] overflow-hidden">
-      <TopBar title="Producto Explosionado" description="Descompón tu producto en capas animadas" />
+      <TopBar
+        title="Producto Explosionado"
+        description="Descompón tu producto en capas animadas"
+      />
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl px-4 pt-8 pb-8 flex flex-col gap-6">
 
-          {/* Error */}
+          {/* ── Error banner ── */}
           {error && (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
               <p className="text-sm text-red-400">{error}</p>
@@ -95,7 +175,7 @@ export default function ExplodedPage() {
             </div>
           )}
 
-          {/* Upload zone */}
+          {/* ── Upload drop zone ── */}
           {phase === "idle" && (
             <div
               onDrop={handleDrop}
@@ -108,63 +188,67 @@ export default function ExplodedPage() {
               </div>
               <div className="text-center">
                 <p className="text-base font-semibold text-white">Sube la foto de tu producto</p>
-                <p className="text-sm text-white/40 mt-1">JPG, PNG, WEBP — máximo 20MB</p>
+                <p className="text-sm text-white/40 mt-1">JPG, PNG, WEBP — máximo 20 MB</p>
               </div>
-              <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleInputChange}
+              />
             </div>
           )}
 
-          {/* Preview + status */}
+          {/* ── Image preview with processing overlay ── */}
           {phase !== "idle" && preview && (
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
-              <img src={preview} alt="Producto" className="w-full object-cover max-h-80" />
+              <img src={preview} alt="Producto a analizar" className="w-full object-cover max-h-80" />
               {isProcessing && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-sm">
                   <Sparkles className="h-10 w-10 text-orange-400 animate-pulse" />
                   <p className="text-sm font-medium text-white">
-                    {phase === "uploading" ? "Subiendo imagen..." : "Detectando componentes..."}
+                    {statusLabel[phase as "converting" | "detecting"]}
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Components detected */}
+          {/* ── Detected components list ── */}
           {phase === "done" && components.length > 0 && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">
                   Componentes detectados ({components.length})
                 </h2>
-                <button onClick={reset} className="text-xs text-white/30 hover:text-white/60 flex items-center gap-1 transition-colors">
+                <button
+                  onClick={reset}
+                  className="text-xs text-white/30 hover:text-white/60 flex items-center gap-1 transition-colors"
+                >
                   <RefreshCw className="h-3 w-3" />
                   Nueva foto
                 </button>
               </div>
 
               <div className="flex flex-col gap-2">
-                {components.map((c, i) => (
-                  <div key={i} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/5 px-4 py-3">
+                {components.map((component, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/5 px-4 py-3"
+                  >
                     <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-xs font-bold text-white">
-                      {i + 1}
+                      {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white">{c.name}</p>
-                      {c.description && <p className="text-xs text-white/40 mt-0.5 truncate">{c.description}</p>}
+                      <p className="text-sm font-semibold text-white">{component.name}</p>
+                      {component.description && (
+                        <p className="text-xs text-white/40 mt-0.5 truncate">{component.description}</p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-
-              {/* CTA — next step */}
-              <button
-                onClick={() => {/* next step: generate */}}
-                className="mt-2 flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-orange-500/30 hover:opacity-90 transition-opacity"
-              >
-                <Zap className="h-4 w-4" />
-                Generar vista explosionada
-                <ChevronRight className="h-4 w-4" />
-              </button>
             </div>
           )}
 

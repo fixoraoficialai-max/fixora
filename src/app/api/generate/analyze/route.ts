@@ -6,12 +6,12 @@ import { ApiErrors, apiSuccess } from "@/lib/api/response";
 import type { DiagramLabel } from "@/components/DiagramOverlay";
 
 const schema = z.object({
-  imageUrl:  z.string().url(),
-  labels:    z.array(z.object({
-    text:        z.string(),
+  imageUrl: z.string().url(),
+  labels: z.array(z.object({
+    text: z.string(),
     description: z.string().optional(),
-    anchorX:     z.number(),
-    anchorY:     z.number(),
+    anchorX: z.number(),
+    anchorY: z.number(),
   })),
 });
 
@@ -20,10 +20,10 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaType: "image/jpeg" | "image/png" | "image/webp" }> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
-  const buffer     = await res.arrayBuffer();
-  const base64     = Buffer.from(buffer).toString("base64");
-  const ct         = res.headers.get("content-type") ?? "image/jpeg";
-  const mediaType  = ct.includes("png") ? "image/png" : ct.includes("webp") ? "image/webp" : "image/jpeg";
+  const buffer = await res.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+  const ct = res.headers.get("content-type") ?? "image/jpeg";
+  const mediaType = ct.includes("png") ? "image/png" : ct.includes("webp") ? "image/webp" : "image/jpeg";
   return { data: base64, mediaType };
 }
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const labelNames = labels.map((l) => l.text).join(", ");
 
     const message = await anthropic.messages.create({
-      model:      "claude-haiku-4-5",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 800,
       system: `You are a precise anatomical image analyzer for a diagram labeling system.
 
@@ -75,7 +75,7 @@ OUTPUT FORMAT: Return ONLY a valid JSON array, no markdown, no explanation:
         role: "user",
         content: [
           {
-            type:   "image",
+            type: "image",
             source: { type: "base64", media_type: mediaType, data: imageData },
           },
           {
@@ -98,7 +98,7 @@ Return ONLY the JSON array.`,
       }],
     });
 
-    const block   = message.content[0];
+    const block = message.content[0];
     const rawText = block?.type === "text" ? block.text.trim() : "[]";
 
     // Parsear coordenadas devueltas por Claude
@@ -117,10 +117,10 @@ Return ONLY the JSON array.`,
         (p) => p.text.toLowerCase().trim() === original.text.toLowerCase().trim()
       );
       return {
-        text:        original.text,
+        text: original.text,
         description: original.description,
-        anchorX:     precise?.anchorX ?? original.anchorX,
-        anchorY:     precise?.anchorY ?? original.anchorY,
+        anchorX: precise?.anchorX ?? original.anchorX,
+        anchorY: precise?.anchorY ?? original.anchorY,
       };
     });
 

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { auth } from "@/lib/auth/config";
 import { ApiErrors, apiSuccess } from "@/lib/api/response";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
@@ -15,19 +15,31 @@ import {
 import { STYLE_IDS, assemblePrompt } from "@/lib/style-dna";
 import type { DiagramLabel } from "@/components/DiagramOverlay";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PROMPT_CREDIT_COST = 1;
+const MODEL              = "gpt-4o-mini";
+
+/** Styles that generate a labeled diagram instead of a plain image */
+const DIAGRAM_STYLES = new Set(["corte-transversal", "infografia"]);
+
+// ─── OpenAI client (module-level singleton) ───────────────────────────────────
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 // ─── Validation schema ────────────────────────────────────────────────────────
 
 const schema = z.object({
   prompt: z
     .string()
-    .min(5, "Prompt muy corto — escribe al menos 5 caracteres")
+    .min(5,    "Prompt muy corto — escribe al menos 5 caracteres")
     .max(2000, "Prompt muy largo — máximo 2000 caracteres")
     .trim(),
-  style: z.enum(PROMPT_STYLES).optional(),
-  tone: z.enum(PROMPT_TONES).optional(),
-  aspectRatio: z.enum(["PORTRAIT", "LANDSCAPE", "SQUARE"]).optional(),
-  styleId: z.enum([...STYLE_IDS] as [string, ...string[]]).optional(),
-  imageBase64: z
+  style:          z.enum(PROMPT_STYLES).optional(),
+  tone:           z.enum(PROMPT_TONES).optional(),
+  aspectRatio:    z.enum(["PORTRAIT", "LANDSCAPE", "SQUARE"]).optional(),
+  styleId:        z.enum([...STYLE_IDS] as [string, ...string[]]).optional(),
+  imageBase64:    z
     .string()
     .refine(
       (val) => ACCEPTED_IMAGE_PREFIXES.some((prefix) => val.startsWith(prefix)),
@@ -38,67 +50,30 @@ const schema = z.object({
   imageMediaType: z.enum(ACCEPTED_IMAGE_TYPES).optional(),
 });
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const PROMPT_CREDIT_COST = 1;
-const MODEL = "claude-haiku-4-5";
-
-// Estilos que requieren etiquetas adicionales en post-proceso
-const DIAGRAM_STYLES = new Set(["corte-transversal", "infografia"]);
-
-// ─── Anthropic client ─────────────────────────────────────────────────────────
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+interface DiagramClaudeResponse {
+  description: string;
+  labels:      DiagramLabel[];
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function buildContext(style?: string, tone?: string, aspectRatio?: string): string {
-  const parts = [
-    style ? `Style: ${style}` : null,
-    tone ? `Tone: ${tone}` : null,
-    aspectRatio ? `Format: ${aspectRatio}` : null,
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "";
+function buildContextString(style?: string, tone?: string, aspectRatio?: string): string {
+  return [
+    style       ? `Style: ${style}`           : null,
+    tone        ? `Tone: ${tone}`             : null,
+    aspectRatio ? `Format: ${aspectRatio}`    : null,
+  ].filter(Boolean).join(", ");
 }
 
-function buildMessageContent(
-  prompt: string,
-  context: string,
-  imageBase64?: string,
-  imageMediaType?: AcceptedImageType
-): Anthropic.MessageParam["content"] {
-  const userText = context
-    ? `Extract visual intent from: "${prompt}" (Context: ${context})`
-    : `Extract visual intent from: "${prompt}"`;
-
-  const textBlock: Anthropic.TextBlockParam = { type: "text", text: userText };
-  if (!imageBase64 || !imageMediaType) return [textBlock];
-
-  const rawBase64 = imageBase64.split(",")[1];
-  if (!rawBase64) return [textBlock];
-
-  const imageBlock: Anthropic.ImageBlockParam = {
-    type: "image",
-    source: { type: "base64", media_type: imageMediaType, data: rawBase64 },
-  };
-  return [imageBlock, textBlock];
-}
-
-// ─── System prompts ───────────────────────────────────────────────────────────
-
-function buildSystemPrompt(
-  hasImage: boolean,
-  styleId?: string,
-  context?: string
-): string {
-  const isDiagram = styleId && DIAGRAM_STYLES.has(styleId);
-
-  const imageNote = hasImage
+function buildSystemPrompt(hasImage: boolean, styleId?: string, context?: string): string {
+  const isDiagram  = styleId ? DIAGRAM_STYLES.has(styleId) : false;
+  const imageNote  = hasImage
     ? "The user has attached a reference image. Analyze its subject, composition, and content."
     : null;
 
   if (isDiagram) {
-    // Para diagramas devolvemos JSON con descripción + etiquetas posicionadas
     return [
       "You are a technical diagram expert for an AI image generation pipeline.",
       imageNote,
@@ -127,7 +102,6 @@ function buildSystemPrompt(
     ].filter(Boolean).join("\n");
   }
 
-  // Para estilos normales devolvemos solo la descripción en texto plano
   return [
     "You are a visual intent extractor for a professional AI image generation pipeline.",
     imageNote,
@@ -140,40 +114,53 @@ function buildSystemPrompt(
   ].filter(Boolean).join(" ");
 }
 
-// ─── Diagram label parser ─────────────────────────────────────────────────────
+function buildMessageContent(
+  prompt:          string,
+  context:         string,
+  imageBase64?:    string,
+  imageMediaType?: AcceptedImageType
+): string | OpenAI.ChatCompletionContentPart[] {
+  const userText = context
+    ? `Extract visual intent from: "${prompt}" (Context: ${context})`
+    : `Extract visual intent from: "${prompt}"`;
 
-interface DiagramClaudeResponse {
-  description: string;
-  labels: DiagramLabel[];
+  if (!imageBase64 || !imageMediaType) return userText;
+
+  const rawBase64 = imageBase64.split(",")[1];
+  if (!rawBase64) return userText;
+
+  return [
+    {
+      type:      "image_url" as const,
+      image_url: { url: `data:${imageMediaType};base64,${rawBase64}` },
+    },
+    { type: "text" as const, text: userText },
+  ];
 }
 
-function parseDiagramResponse(raw: string): DiagramClaudeResponse | null {
+function parseDiagramResponse(rawText: string): DiagramClaudeResponse | null {
   try {
-    // Eliminar posibles bloques de código markdown que Claude añada
-    const clean = raw.replace(/```json|```/g, "").trim();
+    const clean  = rawText.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean) as DiagramClaudeResponse;
 
-    // Validación básica
-    if (
-      typeof parsed.description !== "string" ||
-      !Array.isArray(parsed.labels)
-    ) return null;
+    if (typeof parsed.description !== "string" || !Array.isArray(parsed.labels)) {
+      return null;
+    }
 
-    // Filtrar y normalizar etiquetas
     const validLabels: DiagramLabel[] = parsed.labels
       .filter(
-        (l) =>
-          typeof l.text === "string" &&
-          typeof l.anchorX === "number" &&
-          typeof l.anchorY === "number" &&
-          l.anchorX >= 0 && l.anchorX <= 1 &&
-          l.anchorY >= 0 && l.anchorY <= 1
+        (label) =>
+          typeof label.text    === "string" &&
+          typeof label.anchorX === "number" &&
+          typeof label.anchorY === "number" &&
+          label.anchorX >= 0 && label.anchorX <= 1 &&
+          label.anchorY >= 0 && label.anchorY <= 1
       )
-      .map((l) => ({
-        text: l.text,
-        description: typeof l.description === "string" ? l.description : undefined,
-        anchorX: Math.round(l.anchorX * 100) / 100,
-        anchorY: Math.round(l.anchorY * 100) / 100,
+      .map((label) => ({
+        text:        label.text,
+        description: typeof label.description === "string" ? label.description : undefined,
+        anchorX:     Math.round(label.anchorX * 100) / 100,
+        anchorY:     Math.round(label.anchorY * 100) / 100,
       }));
 
     return { description: parsed.description, labels: validLabels };
@@ -209,63 +196,64 @@ export async function POST(req: NextRequest) {
     const reserved = await reserveCredits(userId, PROMPT_CREDIT_COST);
     if (!reserved) return ApiErrors.insufficientCredits();
 
-    const context = buildContext(style, tone, aspectRatio);
-    const content = buildMessageContent(prompt, context, imageBase64, imageMediaType);
+    const context      = buildContextString(style, tone, aspectRatio);
     const systemPrompt = buildSystemPrompt(!!imageBase64, styleId, context);
+    const userContent  = buildMessageContent(prompt, context, imageBase64, imageMediaType);
 
-    // ── Stage 1: Claude extrae intención visual (+ etiquetas si es diagrama) ──
-    let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
+    // ── Stage 1: GPT-4o-mini extracts visual intent (+ labels if diagram) ──────
+
+    let rawText: string;
     try {
-      message = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: isDiagram ? 600 : 300, // Más tokens para diagramas (JSON más largo)
-        system: systemPrompt,
-        messages: [{ role: "user", content }],
+      const completion = await openai.chat.completions.create({
+        model:      MODEL,
+        max_tokens: isDiagram ? 600 : 300,
+        messages: [
+          { role: "system", content: systemPrompt } as OpenAI.ChatCompletionSystemMessageParam,
+          { role: "user",   content: userContent  } as OpenAI.ChatCompletionUserMessageParam,
+        ],
       });
+      rawText = completion.choices[0]?.message?.content?.trim() ?? prompt;
     } catch (err) {
       await releaseCredits(userId, PROMPT_CREDIT_COST);
-      console.error("[prompt/route] Anthropic API error:", err);
+      console.error("[prompt/route] OpenAI API error:", err);
       return ApiErrors.internal();
     }
 
-    const block = message.content[0];
-    const rawText = block?.type === "text" ? block.text.trim() : prompt;
+    // ── Stage 2: Parse response depending on mode ─────────────────────────────
 
-    let cleanIntent: string;
+    let cleanIntent:  string;
     let diagramLabels: DiagramLabel[] | undefined;
 
     if (isDiagram) {
-      // Parsear JSON devuelto por Claude para diagramas
       const diagramData = parseDiagramResponse(rawText);
       if (diagramData) {
-        cleanIntent = diagramData.description;
+        cleanIntent   = diagramData.description;
         diagramLabels = diagramData.labels;
       } else {
-        // Fallback si Claude no devuelve JSON válido
-        console.warn("[prompt/route] Diagram JSON parse failed, using raw text");
-        cleanIntent = rawText;
+        console.warn("[prompt/route] Diagram JSON parse failed — using raw text as fallback");
+        cleanIntent   = rawText;
         diagramLabels = [];
       }
     } else {
       cleanIntent = rawText;
     }
 
-    // ── Stage 2: Style DNA inyecta dirección de arte ───────────────────────────
+    // ── Stage 3: Style DNA injects art direction ───────────────────────────────
+
     const assembled = assemblePrompt(cleanIntent, styleId);
 
     return apiSuccess({
-      original: prompt,
+      original:         prompt,
       cleanIntent,
-      optimized: assembled.prompt,
-      negativePrompt: assembled.negativePrompt,
+      optimized:        assembled.prompt,
+      negativePrompt:   assembled.negativePrompt,
       needsTextOverlay: assembled.needsTextOverlay,
-      styleName: assembled.styleName,
-      // Solo presente cuando needsTextOverlay === true
+      styleName:        assembled.styleName,
       ...(diagramLabels !== undefined ? { diagramLabels } : {}),
     });
 
   } catch (err) {
-    if (userId) await releaseCredits(userId, PROMPT_CREDIT_COST).catch(() => { });
+    if (userId) await releaseCredits(userId, PROMPT_CREDIT_COST).catch(() => null);
     console.error("[prompt/route] Unhandled error:", err);
     return ApiErrors.internal();
   }

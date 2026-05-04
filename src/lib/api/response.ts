@@ -38,7 +38,7 @@ export const ApiErrors = {
   forbidden: () => apiError("FORBIDDEN", "You do not have permission to perform this action", 403),
   notFound: (resource = "Resource") => apiError("NOT_FOUND", `${resource} not found`, 404),
   validation: (details: unknown) => apiError("VALIDATION_ERROR", "Invalid input", 400, details),
-  internal: () => apiError("INTERNAL_ERROR", "An unexpected error occurred", 500),
+  internal: (message = "An unexpected error occurred") => apiError("INTERNAL_ERROR", message, 500),
   conflict: (message: string) => apiError("CONFLICT", message, 409),
   tooManyRequests: () => apiError("RATE_LIMITED", "Too many requests", 429),
   insufficientCredits: () =>

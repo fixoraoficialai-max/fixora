@@ -294,7 +294,6 @@
     "generationWait": "La generación suele tardar 3–6 minutos. Si cierras esta página, el video aparecerá en tu Historial cuando esté listo.",
     "generationTimeout": "La generación está tomando más de lo esperado. Puedes cerrar esta página — el video aparecerá en tu Historial automáticamente.",
     "creditsOnSuccess": "Los créditos se descuentan solo al finalizar exitosamente.",
-
     "videoTitle": "Generar Video",
     "videoDesc": "Genera un video desde texto o a partir de una imagen",
     "videoRefLabel": "Imagen de referencia (opcional)",
@@ -329,7 +328,6 @@
     "moodEpico": "Épico",
     "moodGracioso": "Gracioso",
     "moodDramatico": "Dramático",
-
     "promptTitle": "Optimizar Prompt",
     "promptDesc": "Describe tu idea — Fixora la transforma en un prompt profesional",
     "promptHeroTitle": "¿Qué quieres que imagine la IA?",
@@ -365,7 +363,6 @@
     "promptErrorSize": "La imagen no puede superar 4MB.",
     "promptErrorMin": "Escribe al menos 5 caracteres",
     "promptNetworkError": "Error de conexión. Inténtalo de nuevo.",
-
     "cloneTitle": "Avatar AI",
     "cloneDesc": "Anima tu personaje IA con el movimiento de un video real",
     "cloneCharLabel": "Tu Personaje",
@@ -389,7 +386,6 @@
     "cloneErrorUploadVid": "Error subiendo video",
     "cloneErrorFailed": "No se pudo generar el video. No se descontaron créditos.",
     "cloneErrorConn": "Error de conexión",
-
     "adTitle": "Ad Creator",
     "adDesc": "Crea un video publicitario con tu personaje y producto",
     "adCharLabel": "Tu Personaje",
@@ -416,7 +412,6 @@
     "adErrorImageSize": "La imagen es demasiado grande (máx 30MB)",
     "adErrorTimeout": "La generación tardó demasiado. Revisa tu Historial en unos minutos.",
     "adErrorFailed": "La generación falló. Tus créditos serán devueltos.",
-
     "multiTitle": "Multi-Avatar",
     "multiDesc": "Intercambia 4 personajes siguiendo el mismo movimiento (5s cada uno)",
     "multiCharsLabel": "Tus 4 Personajes (Secuencia 0-20s)",
@@ -461,5 +456,27 @@
     "seriesDescPlaceholder": "Escribe una breve descripción de la historia (opcional)...",
     "creating": "Creando serie…",
     "createSeries": "Crear Serie"
+  },
+  "stylePrompts": {
+    "corte-transversal": "Transforma el motivo principal en un diagrama educativo de corte transversal limpio sobre fondo blanco. Muestra una sección creíble con interior por capas. Haz que parezca un gráfico científico de libro de texto, priorizando la claridad y precisión.",
+    "infografia": "Crea una infografía educativa del sujeto principal sobre fondo oscuro. Muestra su anatomía interna con zonas claramente diferenciadas por color. Estilo científico de revista Nature o museo de historia natural.",
+    "maquillaje": "Crea una guía visual de maquillaje profesional en formato retrato. Muestra las zonas del rostro con técnicas aplicadas: base, contorno, iluminador, ojos y labios. Estilo editorial de revista de belleza.",
+    "hiperrealista": "Fotografía hiperrealista con luz natural, bokeh suave y textura auténtica. Captura un momento genuino con profundidad de campo y color natural.",
+    "3d-pixar": "Personaje 3D estilo Pixar con iluminación cálida de estudio, formas redondeadas expresivas y colores vibrantes. Render de producción cinematográfica.",
+    "fantasia": "Escena épica de fantasía con iluminación dramática, rayos de luz volumétricos y atmósfera mística. Escala grandiosa con paleta de colores joya.",
+    "comic": "Ilustración de cómic con tinta negra bold, tramas de puntos Ben-Day y colores planos vibrantes. Pose dinámica estilo Marvel clásico.",
+    "avatar-3d": "Avatar 3D estilizado con fondo neutro de estudio, iluminación equilibrada y diseño de personaje expresivo. Render de calidad profesional.",
+    "interiores": "Fotografía de diseño de interiores con luz dorada de ventana, mobiliario cuidadosamente dispuesto y texturas cálidas. Estándar revista Architectural Digest.",
+    "paisaje": "Fotografía de paisaje natural en hora dorada con rango dinámico amplio, primer plano nítido y cielo dramático. Calidad National Geographic.",
+    "surrealista": "Escena surrealista imposible renderizada con realismo fotográfico. Yuxtaposiciones dramáticas de escala con iluminación onírica estilo Dalí o Magritte.",
+    "estatua": "Fotografía de escultura en museo con iluminación dramática de chiaroscuro. Textura de mármol o bronce envejecido con detalle macro.",
+    "chibi": "Sticker chibi sobre fondo blanco puro, contorno bold limpio y colores planos brillantes. Anatomía simplificada con cabeza grande y ojos expresivos.",
+    "vintage": "Póster vintage estilo años 50-60 con paleta de colores limitada y plana, textura de papel envejecido y tipografía de época.",
+    "mini-yo": "Figura coleccionable estilo Funko Pop sobre fondo neutro de estudio, plástico mate suave y proporciones de cabeza grande características.",
+    "dark-fantasy": "Arte conceptual de dark fantasy con iluminación rim dramática, rayos de luz épicos y paleta de colores joya oscuros. Calidad Blizzard Entertainment.",
+    "acuarela": "Pintura de acuarela tradicional con sangrado de colores húmedo sobre húmedo, transparencia de pigmento natural y textura de papel artesanal.",
+    "producto": "Fotografía de producto comercial sobre fondo blanco o degradado, iluminación de 3 puntos con softboxes y detalle ultra nítido. Estándar publicidad de lujo.",
+    "espacio": "Visualización espacial fotorrealista con nebulosa luminosa, polvo cósmico reflectante y detalle planetario. Calidad Hubble o James Webb.",
+    "mejora-fotos": "Mejora la calidad fotográfica preservando la autenticidad: balance de luz natural, reducción de ruido y tonos de piel precisos. Retoque profesional natural."
   }
 }

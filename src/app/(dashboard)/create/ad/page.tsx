@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Megaphone, Users, Package, Download, RefreshCw, Sparkles } from "lucide-react";
+import { Megaphone, Users, Package, Download, RefreshCw, Sparkles, Zap } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, FormField } from "@/components/ui/input";
@@ -248,6 +249,20 @@ export default function AdCreatorPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <TopBar title={t("adTitle")} description={t("adDesc")} />
+
+      {/* ── Exploded Product Banner ── */}
+      <Link href="/create/exploded" className="group mx-4 mt-4 flex items-center gap-4 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent p-4 transition-all hover:border-orange-500/60 hover:from-orange-500/20">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg shadow-orange-500/30">
+          <Zap className="h-6 w-6 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-white">Producto Explosionado</p>
+          <p className="text-xs text-white/50 mt-0.5">Sube una foto y crea un video con los componentes flotando</p>
+        </div>
+        <div className="flex-shrink-0 rounded-full bg-orange-500/20 px-3 py-1 text-[10px] font-semibold text-orange-400 border border-orange-500/30">
+          NUEVO
+        </div>
+      </Link>
 
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="mx-auto max-w-2xl">

@@ -3,7 +3,6 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth/config";
 import { ApiErrors, apiSuccess } from "@/lib/api/response";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
 import type { DiagramLabel } from "@/components/DiagramOverlay";
 
 const schema = z.object({
@@ -11,9 +10,9 @@ const schema = z.object({
   labels:    z.array(z.object({
     text:        z.string(),
     description: z.string().optional(),
-    anchorX:     z.number().min(0).max(1),
-    anchorY:     z.number().min(0).max(1),
-  })).min(1).max(20),
+    anchorX:     z.number(),
+    anchorY:     z.number(),
+  })),
 });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -32,11 +31,6 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) return ApiErrors.unauthorized();
-
-    // Rate limit: máximo 10 análisis por minuto por usuario (mismo límite que imágenes)
-    if (!(await checkRateLimit(`analyze:${session.user.id}`, RATE_LIMITS.image))) {
-      return ApiErrors.tooManyRequests();
-    }
 
     let body: unknown;
     try { body = await req.json(); }

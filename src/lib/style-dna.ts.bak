@@ -90,9 +90,9 @@ export const STYLE_DNA: Record<StyleId, StyleDNA> = {
   "corte-transversal": {
     name: "Corte Transversal",
     // ⚠️ IMPORTANTE: NO pedir texto ni etiquetas a Flux. Se añaden en post-proceso.
-    base: "photorealistic cross-section cutaway, pure white background, studio product photography, sharp detail, real materials and textures",
-    material: "razor-sharp food photography lighting, natural realistic textures, each layer clearly separated and visible",
-    quality: "National Geographic editorial quality, hyper-realistic macro photography, Hasselblad camera sharpness",
+    base: "clean technical cross-section illustration, pure white background, frontal orthographic view, color-coded layers",
+    material: "precise clean line art, color-coded interior sections, professional technical diagram style, each layer a different color",
+    quality: "scientific textbook illustration standard, museum exhibit quality, anatomically accurate technical diagram",
     negatives: "text, labels, letters, words, captions, annotations, watermarks, artistic style, 3D shadows, dark background, blurry, ugly",
     triggerWords: "technical cross-section diagram, cutaway illustration, educational diagram",
     needsTextOverlay: true, // 🔴 Las etiquetas se añaden con Canvas/SVG después

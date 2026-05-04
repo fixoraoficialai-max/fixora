@@ -223,6 +223,7 @@ export const RATE_LIMITS = {
   prompt:         { limit: 5,  windowMs: 60_000        },  // 5 prompt optimizations/min
   userProfile:    { limit: 20, windowMs: 60_000        },  // 20 profile updates/min
   userPassword:   { limit: 5,  windowMs: 60_000        },  // 5 password changes/min — bcrypt DoS guard
+  exploded:       { limit: 5,  windowMs: 60_000        },  // 5 product analyses/min
 } as const;
 
 // ─── IP Rate Limiter (Edge-compatible) ───────────────────────────────────────

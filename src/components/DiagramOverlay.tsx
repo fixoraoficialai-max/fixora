@@ -124,13 +124,13 @@ export function DiagramOverlay({
                                 onMouseEnter={() => setHovered(label.text)}
                                 onMouseLeave={() => setHovered(null)}
                             >
-                                <circle cx={ax} cy={ay} r={isHov ? DOT_HOVER_R : DOT_RADIUS} fill={isHov ? "#000" : "#222"} style={{ transition: "r 0.15s ease" }} />
-                                <polyline points={`${ax},${ay} ${elbowX},${labelY} ${labelX},${labelY}`} fill="none" stroke={isHov ? "#000" : "#444"} strokeWidth={isHov ? 1.2 : 0.8} style={{ transition: "stroke 0.15s ease" }} />
-                                <text x={labelX} y={labelY + 3} textAnchor={textAnchor} fontSize="10" fontWeight="700" fontFamily="system-ui, -apple-system, sans-serif" fill="#111" style={{ userSelect: "none" }}>{label.text.toUpperCase()}</text>
+                                <circle cx={ax} cy={ay} r={isHov ? DOT_HOVER_R : DOT_RADIUS} fill={isHov ? "#ffffff" : "rgba(255,255,255,0.9)"} stroke="rgba(0,0,0,0.45)" strokeWidth="1" style={{ transition: "r 0.15s ease" }} />
+                                <polyline points={`${ax},${ay} ${elbowX},${labelY} ${labelX},${labelY}`} fill="none" stroke={isHov ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)"} strokeWidth={isHov ? 1 : 0.75} strokeDasharray="4 3" style={{ transition: "stroke 0.15s ease" }} />
+                                <text x={labelX} y={labelY + 4} textAnchor={textAnchor} fontSize="11.5" fontWeight="700" fontFamily="system-ui, -apple-system, sans-serif" fill="white" stroke="rgba(0,0,0,0.7)" strokeWidth="3.5" paintOrder="stroke" style={{ userSelect: "none" }}>{label.text}</text>
                                 {isHov && label.description && (
                                     <>
-                                        <rect x={isLeft ? labelX : labelX - descWidth} y={labelY + 8} width={descWidth} height={20} rx="4" fill="rgba(255,255,255,0.95)" stroke="#ccc" strokeWidth={1} />
-                                        <text x={isLeft ? labelX + 5 : labelX - 5} y={labelY + 22} textAnchor={textAnchor} fontSize="9" fontFamily="system-ui, -apple-system, sans-serif" fill="#333" style={{ userSelect: "none" }}>{label.description}</text>
+                                        <rect x={isLeft ? labelX : labelX - descWidth} y={labelY + 10} width={descWidth} height={20} rx="4" fill="rgba(0,0,0,0.72)" />
+                                        <text x={isLeft ? labelX + 5 : labelX - 5} y={labelY + 24} textAnchor={textAnchor} fontSize="9.5" fontFamily="system-ui, -apple-system, sans-serif" fill="rgba(255,255,255,0.88)" style={{ userSelect: "none" }}>{label.description}</text>
                                     </>
                                 )}
                             </g>

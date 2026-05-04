@@ -61,7 +61,7 @@ function buildPayload(
 
   const base = {
     prompt,
-    duration: parseInt(duration, 10),  // Kling API expects integer, not string
+    duration,       // Kling expects "5" or "10" as string
     aspect_ratio: ratio,
   };
 
@@ -121,10 +121,8 @@ export async function POST(req: NextRequest) {
   } catch (falErr) {
     // Credits reserved but generation failed — return them immediately
     await releaseCredits(userId, CREDITS_REQUIRED).catch(() => null);
-    const msg = falErr instanceof Error ? falErr.message : String(falErr);
-    console.error("[video/route] Fal.ai error:", msg, falErr);
-    // Surface the real error so the client can show a useful message
-    return ApiErrors.internal(msg);
+    console.error("[video/route] Fal.ai error:", falErr);
+    return ApiErrors.internal();
   }
 
   // Persist video record (non-critical — video was already generated)

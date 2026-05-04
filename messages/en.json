@@ -294,7 +294,6 @@
     "generationWait": "Generation usually takes 3–6 minutes. If you close this page, the video will appear in your History when ready.",
     "generationTimeout": "Generation is taking longer than expected. You can close this page — the video will appear in your History automatically.",
     "creditsOnSuccess": "Credits are only charged upon successful completion.",
-
     "videoTitle": "Generate Video",
     "videoDesc": "Generate a video from text or from an image",
     "videoRefLabel": "Reference image (optional)",
@@ -329,7 +328,6 @@
     "moodEpico": "Epic",
     "moodGracioso": "Funny",
     "moodDramatico": "Dramatic",
-
     "promptTitle": "Optimize Prompt",
     "promptDesc": "Describe your idea — Fixora transforms it into a professional prompt",
     "promptHeroTitle": "What do you want the AI to imagine?",
@@ -365,7 +363,6 @@
     "promptErrorSize": "Image cannot exceed 4MB.",
     "promptErrorMin": "Write at least 5 characters",
     "promptNetworkError": "Connection error. Please try again.",
-
     "cloneTitle": "Avatar AI",
     "cloneDesc": "Animate your AI character with the movement from a real video",
     "cloneCharLabel": "Your Character",
@@ -389,7 +386,6 @@
     "cloneErrorUploadVid": "Error uploading video",
     "cloneErrorFailed": "Could not generate the video. No credits were charged.",
     "cloneErrorConn": "Connection error",
-
     "adTitle": "Ad Creator",
     "adDesc": "Create an advertising video with your character and product",
     "adCharLabel": "Your Character",
@@ -416,7 +412,6 @@
     "adErrorImageSize": "Image is too large (max 30MB)",
     "adErrorTimeout": "Generation took too long. Check your History in a few minutes.",
     "adErrorFailed": "Generation failed. Your credits will be refunded.",
-
     "multiTitle": "Multi-Avatar",
     "multiDesc": "Swap 4 characters following the same movement (5s each)",
     "multiCharsLabel": "Your 4 Characters (Sequence 0–20s)",
@@ -461,5 +456,27 @@
     "seriesDescPlaceholder": "Write a brief description of the story (optional)...",
     "creating": "Creating series…",
     "createSeries": "Create Series"
+  },
+  "stylePrompts": {
+    "corte-transversal": "Transform the main subject into a clean educational cross-section diagram on a white background. Show a believable layered interior section. Make it look like a scientific textbook or museum graphic, prioritizing clarity and precision.",
+    "infografia": "Create an educational infographic of the main subject on a dark background. Show its internal anatomy with clearly color-coded zones. Scientific style of Nature magazine or natural history museum.",
+    "maquillaje": "Create a professional makeup visual guide in portrait format. Show facial zones with applied techniques: foundation, contour, highlighter, eyes and lips. Beauty magazine editorial style.",
+    "hiperrealista": "Hyperrealistic photography with natural light, soft bokeh and authentic texture. Capture a genuine moment with depth of field and natural color.",
+    "3d-pixar": "3D character in Pixar style with warm studio lighting, expressive rounded shapes and vibrant colors. Cinematic production render.",
+    "fantasia": "Epic fantasy scene with dramatic lighting, volumetric light rays and mystical atmosphere. Grand scale with jewel tone color palette.",
+    "comic": "Comic illustration with bold black ink, Ben-Day dot patterns and vibrant flat colors. Dynamic pose in classic Marvel style.",
+    "avatar-3d": "Stylized 3D avatar with neutral studio background, balanced lighting and expressive character design. Professional quality render.",
+    "interiores": "Interior design photography with golden window light, carefully staged furniture and warm textures. Architectural Digest magazine standard.",
+    "paisaje": "Natural landscape photography at golden hour with wide dynamic range, sharp foreground and dramatic sky. National Geographic quality.",
+    "surrealista": "Impossible surrealist scene rendered with photographic realism. Dramatic scale juxtapositions with dreamlike lighting in the style of Dalí or Magritte.",
+    "estatua": "Museum sculpture photography with dramatic chiaroscuro lighting. Aged marble or bronze texture with macro detail.",
+    "chibi": "Chibi sticker on pure white background, clean bold outline and bright flat colors. Simplified anatomy with large head and expressive eyes.",
+    "vintage": "1950s-60s vintage poster with limited flat color palette, aged paper texture and period typography.",
+    "mini-yo": "Funko Pop style collectible figure on neutral studio background, soft matte plastic and characteristic large head proportions.",
+    "dark-fantasy": "Dark fantasy concept art with dramatic rim lighting, epic light rays and dark jewel tone palette. Blizzard Entertainment quality.",
+    "acuarela": "Traditional watercolor painting with wet-on-wet color bleeding, natural pigment transparency and handmade paper texture.",
+    "producto": "Commercial product photography on white or gradient background, 3-point softbox lighting and ultra-sharp detail. Luxury advertising standard.",
+    "espacio": "Photorealistic space visualization with luminous nebula, reflective cosmic dust and planetary detail. Hubble or James Webb quality.",
+    "mejora-fotos": "Enhance photo quality while preserving authenticity: natural light balance, noise reduction and accurate skin tones. Natural professional retouching."
   }
 }

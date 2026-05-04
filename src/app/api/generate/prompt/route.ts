@@ -83,7 +83,8 @@ function buildMessageContent(
 ): Anthropic.MessageParam["content"] {
   const textBlock: Anthropic.TextBlockParam = {
     type: "text",
-    text: `Optimize this prompt: "${prompt}"${context}`,
+    text: `Extract visual intent from this idea: "${prompt}"${context}`,
+
   };
 
   if (!imageBase64 || !imageMediaType) return [textBlock];

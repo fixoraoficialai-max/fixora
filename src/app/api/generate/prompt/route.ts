@@ -82,7 +82,7 @@ function buildSystemPrompt(hasImage: boolean, styleId?: string, context?: string
       "",
       "Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):",
       `{
-  "description": "One sentence describing the subject to illustrate in English. The image must contain NO text, no labels, no letters, no callouts, no typography inside the image.",
+  "description": "One sentence describing the subject to illustrate in English as a clean standalone visual image.",
   "labels": [
     {
       "text": "Label name in Spanish",
@@ -99,7 +99,7 @@ function buildSystemPrompt(hasImage: boolean, styleId?: string, context?: string
       "- Estimate realistic positions based on how the subject typically looks in a cross-section.",
       "- Place 2-3 labels on the left side (anchorX < 0.5) and 2-4 on the right (anchorX >= 0.5).",
       "- Avoid placing labels at exactly 0.5 horizontally — they must be clearly left or right.",
-      "CRITICAL: The description field must never mention text, labels, or annotations. The image Flux generates must be purely visual.",
+      "CRITICAL: The description field must never mention text, labels, or annotations. Text prohibition is handled later by Style DNA / assemblePrompt.",
       context ? `Context: ${context}` : null,
     ].filter(Boolean).join("\n");
   }

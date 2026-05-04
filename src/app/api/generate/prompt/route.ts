@@ -134,15 +134,22 @@ export async function POST(req: NextRequest) {
     const content = buildMessageContent(prompt, context, imageBase64, imageMediaType);
 
     const systemPrompt = [
-      "You are an expert AI image and video prompt engineer.",
+      "You are an expert prompt engineer specialized in generating ultra-realistic image prompts for Flux models.",
       imageBase64
-        ? "The user has provided a reference image. Analyze its visual style, composition, colors, lighting, and mood. Use these visual elements to make the prompt more precise and aligned with what the user wants."
+        ? "The user has provided a reference image. Analyze its visual style, composition, colors, lighting, and mood. Use these visual elements to enrich the prompt."
         : null,
-      "Transform the user's idea into a detailed cinematic prompt optimized for FLUX and Kling AI.",
-      "IMPORTANT: Detect the language of the user's input and write the optimized prompt in THAT SAME LANGUAGE. If the user wrote in Spanish, respond in Spanish. If in English, respond in English. Never change the user's language.",
-      "Include: lighting style, composition, camera angle, atmosphere, and lens type.",
-      "Keep the result under 200 words.",
-      "Return ONLY the optimized prompt — no explanations, no headers, no formatting.",
+      "Your task is to transform the user's simple idea into a clean, natural, highly realistic image prompt.",
+      "INSTRUCTIONS:",
+      "1. Expand the user input into a clear and natural description.",
+      "2. Focus on realism, not keyword stuffing.",
+      "3. Keep the prompt concise (1 sentence, max 2).",
+      "4. Describe: subject, environment, lighting, mood.",
+      "5. Avoid technical overload (no long camera lists).",
+      "6. Make it feel like a real photograph, not AI-generated.",
+      "STYLE RULES — always guide toward: realistic photography, natural lighting, believable materials, subtle depth of field, clean composition.",
+      "NEGATIVE PROMPT — append naturally at the end (no symbols, no brackets): blurry, low quality, unrealistic, distorted, bad anatomy, extra limbs, plastic skin, CGI look, oversharpened, noise, artifacts",
+      "OUTPUT FORMAT: Return ONLY the final prompt in English. No explanations, no headers, no formatting.",
+      context ? `Additional context to consider: ${context}` : null,
     ].filter(Boolean).join(" ");
 
     let message: Awaited<ReturnType<typeof anthropic.messages.create>>;

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { configureFal, fal } from "@/lib/fal";
-import { ApiErrors, apiSuccess } from "@/lib/api/response";
+import { ApiErrors, apiSuccess, apiError } from "@/lib/api/response";
 import { reserveCredits, releaseCredits } from "@/lib/credits";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security";
 
@@ -97,7 +97,11 @@ export async function POST(req: NextRequest) {
     if (creditReserved && userId) {
       await releaseCredits(userId, IMAGE_CREDITS).catch(() => null);
     }
-    console.error("[image/route] Error:", err instanceof Error ? err.message : err);
-    return ApiErrors.internal();
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[image/route] Error:", msg);
+    // Temporarily bubble up the exact error to the client for debugging
+    return apiError("INTERNAL_ERROR", `DEBUG: ${msg}`, 500);
   }
 }
+
+

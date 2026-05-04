@@ -12,6 +12,7 @@ import {
   ACCEPTED_IMAGE_PREFIXES,
   type AcceptedImageType,
 } from "@/lib/prompt-constants";
+import { STYLE_IDS, assemblePrompt } from "@/lib/style-dna";
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
@@ -26,9 +27,11 @@ const schema = z.object({
     .min(5,    "Prompt muy corto — escribe al menos 5 caracteres")
     .max(2000, "Prompt muy largo — máximo 2000 caracteres")
     .trim(),
-  style:         z.enum(PROMPT_STYLES).optional(),
-  tone:          z.enum(PROMPT_TONES).optional(),
-  aspectRatio:   z.enum(["PORTRAIT", "LANDSCAPE", "SQUARE"]).optional(),
+  style:       z.enum(PROMPT_STYLES).optional(),
+  tone:        z.enum(PROMPT_TONES).optional(),
+  aspectRatio: z.enum(["PORTRAIT", "LANDSCAPE", "SQUARE"]).optional(),
+  /** Style card ID from the image page. Validated server-side against the allowlist. */
+  styleId:     z.enum([...STYLE_IDS] as [string, ...string[]]).optional(),
   imageBase64: z.string()
     .refine(
       (val) => ACCEPTED_IMAGE_PREFIXES.some((prefix) => val.startsWith(prefix)),
@@ -45,7 +48,7 @@ const schema = z.object({
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PROMPT_CREDIT_COST = 1;
-const MODEL              = "claude-haiku-4-5-20251001";
+const MODEL = "claude-haiku-4-5-20251001";
 
 // ─── Anthropic client — singleton, one instance per lambda warm start ─────────
 
@@ -59,8 +62,8 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
  */
 function buildContext(style?: string, tone?: string, aspectRatio?: string): string {
   const parts = [
-    style       ? `Estilo: ${style}`           : null,
-    tone        ? `Tono: ${tone}`              : null,
+    style ? `Estilo: ${style}` : null,
+    tone ? `Tono: ${tone}` : null,
     aspectRatio ? `Proporción: ${aspectRatio}` : null,
   ].filter(Boolean);
 
@@ -90,11 +93,11 @@ function buildMessageContent(
   if (!rawBase64) return [textBlock]; // malformed data URI — degrade gracefully
 
   const imageBlock: Anthropic.ImageBlockParam = {
-    type:   "image",
+    type: "image",
     source: {
-      type:       "base64",
+      type: "base64",
       media_type: imageMediaType,
-      data:       rawBase64,
+      data: rawBase64,
     },
   };
 
@@ -125,7 +128,7 @@ export async function POST(req: NextRequest) {
     const parsed = schema.safeParse(body);
     if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
 
-    const { prompt, style, tone, aspectRatio, imageBase64, imageMediaType } = parsed.data;
+    const { prompt, style, tone, aspectRatio, styleId, imageBase64, imageMediaType } = parsed.data;
 
     const reserved = await reserveCredits(userId, PROMPT_CREDIT_COST);
     if (!reserved) return ApiErrors.insufficientCredits();
@@ -133,30 +136,24 @@ export async function POST(req: NextRequest) {
     const context = buildContext(style, tone, aspectRatio);
     const content = buildMessageContent(prompt, context, imageBase64, imageMediaType);
 
+    // ── Layer 1: Claude extracts clean visual intent only ──────────────────────
     const systemPrompt = [
-      "You are an expert prompt engineer specialized in generating ultra-realistic image prompts for Flux models.",
+      "You are a visual intent extractor for an AI image generation pipeline.",
       imageBase64
-        ? "The user has provided a reference image. Analyze its visual style, composition, colors, lighting, and mood. Use these visual elements to enrich the prompt."
+        ? "The user has attached a reference image. Analyze its subject, environment, lighting, and mood to enrich the description."
         : null,
-      "Your task is to transform the user's simple idea into a clean, natural, highly realistic image prompt.",
-      "INSTRUCTIONS:",
-      "1. Expand the user input into a clear and natural description.",
-      "2. Focus on realism, not keyword stuffing.",
-      "3. Keep the prompt concise (1 sentence, max 2).",
-      "4. Describe: subject, environment, lighting, mood.",
-      "5. Avoid technical overload (no long camera lists).",
-      "6. Make it feel like a real photograph, not AI-generated.",
-      "STYLE RULES — always guide toward: realistic photography, natural lighting, believable materials, subtle depth of field, clean composition.",
-      "NEGATIVE PROMPT — append naturally at the end (no symbols, no brackets): blurry, low quality, unrealistic, distorted, bad anatomy, extra limbs, plastic skin, CGI look, oversharpened, noise, artifacts",
-      "OUTPUT FORMAT: Return ONLY the final prompt in English. No explanations, no headers, no formatting.",
-      context ? `Additional context to consider: ${context}` : null,
+      "Your ONLY task: convert the user's raw idea into a clean, natural 1-2 sentence visual description in English.",
+      "Describe ONLY: the subject, setting, lighting, and mood.",
+      "Do NOT add style, camera specs, quality keywords, or negative prompts — those are handled by a separate backend layer.",
+      "Return ONLY the clean description. No explanations, no headers, no formatting.",
+      context ? `Context clues (aspect/tone): ${context}` : null,
     ].filter(Boolean).join(" ");
 
     let message: Awaited<ReturnType<typeof anthropic.messages.create>>;
     try {
       message = await anthropic.messages.create({
         model:      MODEL,
-        max_tokens: 300,
+        max_tokens: 200,
         system:     systemPrompt,
         messages:   [{ role: "user", content }],
       });
@@ -166,8 +163,11 @@ export async function POST(req: NextRequest) {
       return ApiErrors.internal();
     }
 
-    const block     = message.content[0];
-    const optimized = block?.type === "text" ? block.text.trim() : prompt;
+    const block      = message.content[0];
+    const cleanIntent = block?.type === "text" ? block.text.trim() : prompt;
+
+    // ── Layer 2: Backend assembler injects Style DNA deterministically ─────────
+    const optimized = assemblePrompt(cleanIntent, styleId);
 
     return apiSuccess({ original: prompt, optimized });
 
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
     // Safety net — any unhandled exception (DB down, cold-start crash, etc.)
     // must never return an empty body. Always respond with JSON so the client
     // can parse the error and show a proper message.
-    if (userId) await releaseCredits(userId, PROMPT_CREDIT_COST).catch(() => {});
+    if (userId) await releaseCredits(userId, PROMPT_CREDIT_COST).catch(() => { });
     console.error("[prompt/route] Unhandled error:", err);
     return ApiErrors.internal();
   }

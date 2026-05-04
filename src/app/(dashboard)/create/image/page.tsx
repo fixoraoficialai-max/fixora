@@ -57,14 +57,25 @@ function canvasAspectClass(ratio: AspectRatio): string {
 
 // ─── Small suggestion card ────────────────────────────────────────────────────
 
-function SmallCard({ label, image, onClick }: { label: string; image: string; onClick: () => void }) {
+function SmallCard({ label, image, selected, onClick }: {
+  label:    string;
+  image:    string;
+  selected: boolean;
+  onClick:  () => void;
+}) {
   return (
     <button
       onClick={onClick}
-      className="group relative h-24 w-[4.5rem] flex-shrink-0 overflow-hidden rounded-xl border border-white/10 transition-all hover:border-primary/50"
+      className={cn(
+        "group relative h-24 w-[4.5rem] flex-shrink-0 overflow-hidden rounded-xl border transition-all",
+        selected
+          ? "border-primary shadow-[0_0_14px_rgba(124,58,237,0.5)] scale-[1.04]"
+          : "border-white/10 hover:border-primary/50"
+      )}
     >
       <img src={image} alt={label} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+      {selected && <div className="absolute inset-0 bg-primary/10" />}
       <span className="absolute bottom-1.5 left-0 right-0 px-1 text-center text-[9px] font-medium text-white leading-tight">{label}</span>
     </button>
   );
@@ -78,6 +89,7 @@ export default function QuickImagePage() {
   const [isGenerating, setIsGenerating]       = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [error, setError]                     = useState("");
+  const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
 
   async function handleGenerate(promptToUse?: string) {
     const finalPrompt = promptToUse ?? description;
@@ -90,7 +102,11 @@ export default function QuickImagePage() {
     try {
       const promptRes  = await fetch("/api/generate/prompt", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: finalPrompt, aspectRatio }),
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          aspectRatio,
+          ...(selectedStyleId && { styleId: selectedStyleId }),
+        }),
       });
       const promptData = await promptRes.json() as { success: boolean; data?: { optimized: string } };
       const optimized  = promptData.data?.optimized ?? finalPrompt;
@@ -114,6 +130,7 @@ export default function QuickImagePage() {
     setDescription("");
     setGeneratedImages([]);
     setError("");
+    setSelectedStyleId(null);
   }
 
   const firstImage  = generatedImages[0];
@@ -229,7 +246,11 @@ export default function QuickImagePage() {
                       key={s.id}
                       label={s.label}
                       image={s.image}
-                      onClick={() => setDescription(s.displayEs)}
+                      selected={selectedStyleId === s.id}
+                      onClick={() => {
+                        setDescription(s.displayEs);
+                        setSelectedStyleId(s.id);
+                      }}
                     />
                   ))}
                 </div>
@@ -242,6 +263,22 @@ export default function QuickImagePage() {
 
       {/* ── Sticky bottom input bar ── */}
       <div className="flex-shrink-0 px-4 py-2 border-t border-white/5 bg-[#070709]">
+        {/* Style chip indicator */}
+        {selectedStyleId && (
+          <div className="mx-auto max-w-2xl flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] text-white/30">Estilo:</span>
+            <span className="text-[10px] font-semibold text-primary/90 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+              {ALL_SUGGESTIONS.find((s) => s.id === selectedStyleId)?.label}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedStyleId(null)}
+              className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="mx-auto max-w-2xl flex items-center gap-2 rounded-xl bg-[#1c1c1e] border border-white/10 px-3 py-2">
           <button
             type="button"

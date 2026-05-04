@@ -33,34 +33,40 @@ type FluxResult = { images: Array<{ url: string }> };
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return ApiErrors.unauthorized();
-
-  // 1. Rate limit — 10 image generations/min per user
-  if (!(await checkRateLimit(`image:${session.user.id}`, RATE_LIMITS.image))) {
-    return ApiErrors.tooManyRequests();
-  }
-
-  // 2. Parse body
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return ApiErrors.validation({ message: "Invalid JSON body" });
-  }
-
-  // 3. Validate — Zod guards every field before backend logic runs
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
-
-  const { prompt, aspectRatio } = parsed.data;
-  const userId = session.user.id;
-
-  // 4. Atomic credit reservation — prevents race conditions
-  const reserved = await reserveCredits(userId, IMAGE_CREDITS);
-  if (!reserved) return ApiErrors.insufficientCredits();
+  let userId: string | undefined;
+  let creditReserved = false;
 
   try {
+    // 1. Authentication
+    const session = await auth();
+    if (!session?.user?.id) return ApiErrors.unauthorized();
+    userId = session.user.id;
+
+    // 2. Rate limit — 10 image generations/min per user
+    if (!(await checkRateLimit(`image:${userId}`, RATE_LIMITS.image))) {
+      return ApiErrors.tooManyRequests();
+    }
+
+    // 3. Parse body
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return ApiErrors.validation({ message: "Invalid JSON body" });
+    }
+
+    // 4. Validate — Zod guards every field before backend logic runs
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
+
+    const { prompt, aspectRatio } = parsed.data;
+
+    // 5. Atomic credit reservation — prevents race conditions
+    const reserved = await reserveCredits(userId, IMAGE_CREDITS);
+    if (!reserved) return ApiErrors.insufficientCredits();
+    creditReserved = true;
+
+    // 6. Configure and call Fal.ai
     configureFal();
 
     const result = await fal.run(FAL_MODEL, {
@@ -75,8 +81,8 @@ export async function POST(req: NextRequest) {
     const imageUrl = result.images[0]?.url;
     if (!imageUrl) throw new Error("No image URL in Fal.ai response");
 
-    // Persist to history — non-critical: isolated so any DB issue never
-    // rolls back credits or blocks the successful image response.
+    // 7. Persist to history — non-critical: isolated so any DB issue never
+    //    blocks the successful image response or triggers a credit refund.
     db.generatedImage.create({
       data: { userId, prompt, imageUrl, sceneText: null },
     }).catch((dbErr: unknown) => {
@@ -86,11 +92,12 @@ export async function POST(req: NextRequest) {
     return apiSuccess({ imageUrl });
 
   } catch (err) {
-    // Only Fal.ai failures reach here — release credits
-    await releaseCredits(userId, IMAGE_CREDITS).catch(() => null);
-    console.error("[image/route] Fal.ai generation error:", err instanceof Error ? err.message : err);
+    // Safety net — catches auth(), checkRateLimit(), reserveCredits(), or Fal.ai failures.
+    // Only release credits if they were successfully reserved before the failure.
+    if (creditReserved && userId) {
+      await releaseCredits(userId, IMAGE_CREDITS).catch(() => null);
+    }
+    console.error("[image/route] Error:", err instanceof Error ? err.message : err);
     return ApiErrors.internal();
   }
-
-
 }

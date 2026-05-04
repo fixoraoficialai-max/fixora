@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Download, Zap, Sparkles, RefreshCw, Image as ImageIcon, Wand2, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Download, Zap, Sparkles, RefreshCw, Wand2, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
@@ -11,38 +11,132 @@ import { cn } from "@/lib/utils";
 
 type AspectRatio = "LANDSCAPE" | "PORTRAIT" | "SQUARE";
 
-const SUGGESTIONS = [
-  { 
-    id: "anime", 
-    label: "Anime", 
+/** All available suggestion cards — rotated in batches of SUGGESTIONS_PAGE_SIZE. */
+const ALL_SUGGESTIONS = [
+  {
+    id: "anime",
+    label: "Anime",
     prompt: "A beautiful anime-style girl standing in a neon-lit Tokyo street at night, purple hair, detailed eyes, cinematic lighting.",
-    image: "https://images.unsplash.com/photo-1578632292335-df3abbb0d586?q=80&w=500&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1578632292335-df3abbb0d586?q=80&w=500&auto=format&fit=crop",
   },
-  { 
-    id: "photorealistic", 
-    label: "Hiperrealista", 
-    prompt: "Close-up portrait of a majestic lion with golden mane, photorealistic, 8k, detailed fur, bokeh background.",
-    image: "https://images.unsplash.com/photo-1614027164847-1b28006879b2?q=80&w=500&auto=format&fit=crop"
+  {
+    id: "hiperrealista",
+    label: "Hiperrealista",
+    prompt: "Close-up portrait of a majestic lion with golden mane, photorealistic, 8k, detailed fur, dramatic bokeh background.",
+    image: "https://images.unsplash.com/photo-1614027164847-1b28006879b2?q=80&w=500&auto=format&fit=crop",
   },
-  { 
-    id: "3d", 
-    label: "Pixar 3D", 
-    prompt: "A cute little robot exploring a futuristic garden, Pixar 3D style, vibrant colors, soft lighting, detailed textures.",
-    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=500&auto=format&fit=crop"
+  {
+    id: "3d-pixar",
+    label: "Pixar 3D",
+    prompt: "A cute little robot exploring a futuristic garden, Pixar 3D style, vibrant colors, soft cinematic lighting, ultra-detailed.",
+    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=500&auto=format&fit=crop",
   },
-  { 
-    id: "fantasy", 
-    label: "Fantasía", 
-    prompt: "A massive castle floating in the clouds, ethereal lighting, waterfalls falling into the abyss, fantasy art style.",
-    image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=500&auto=format&fit=crop"
+  {
+    id: "fantasia",
+    label: "Fantasía",
+    prompt: "A massive castle floating in the clouds, ethereal lighting, waterfalls falling into the abyss, epic fantasy art style.",
+    image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=500&auto=format&fit=crop",
   },
-  { 
-    id: "cyberpunk", 
-    label: "Cyberpunk", 
+  {
+    id: "cyberpunk",
+    label: "Cyberpunk",
     prompt: "Cyberpunk city alleyway, neon signs in Japanese, flying cars above, rainy street with reflections, cinematic atmosphere.",
-    image: "https://images.unsplash.com/photo-1605142859862-978be7eba909?q=80&w=500&auto=format&fit=crop"
-  }
-];
+    image: "https://images.unsplash.com/photo-1605142859862-978be7eba909?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "estatua",
+    label: "Estatua",
+    prompt: "A hyper-realistic marble statue of a Greek goddess in a grand museum hall, dramatic chiaroscuro lighting, photorealistic.",
+    image: "https://images.unsplash.com/photo-1564399580075-5dfe19c205f3?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "surrealista",
+    label: "Surrealista",
+    prompt: "A giant broccoli tree floating above a desert landscape, melting clocks draping from its branches, surrealist painting style.",
+    image: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "comic",
+    label: "Cómic",
+    prompt: "A superhero in a comic book splash page, bold ink outlines, halftone dots, dynamic pose, vibrant flat colors, retro style.",
+    image: "https://images.unsplash.com/photo-1559535332-db9971090158?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "avatar-3d",
+    label: "Avatar 3D",
+    prompt: "A stylized 3D avatar of a young woman with blue hair and futuristic sunglasses, Blender render, clean background.",
+    image: "https://images.unsplash.com/photo-1568572933382-74d440642117?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "diseno-interiores",
+    label: "Diseño de interiores",
+    prompt: "A minimalist Scandinavian living room with warm natural light, wooden floors, linen sofa, architectural photography, 8k.",
+    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "carta-tarot",
+    label: "Carta de tarot",
+    prompt: "A mystical tarot card illustration of The Moon, Art Nouveau style, intricate borders, rich jewel tones, vintage print.",
+    image: "https://images.unsplash.com/photo-1600429867610-4c5de9b97f70?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "paisaje",
+    label: "Paisaje",
+    prompt: "A breathtaking aerial view of a dramatic Norwegian fjord at golden hour, misty mountains, crystal clear water, 8K photography.",
+    image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "stickers-chibi",
+    label: "Stickers chibi",
+    prompt: "A set of cute chibi-style character stickers with a golden retriever puppy, expressive big eyes, white background, flat design.",
+    image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "infografia-animal",
+    label: "Infografía animal",
+    prompt: "A detailed scientific infographic poster of a blue whale anatomy, dark teal background, clean label lines, educational illustration.",
+    image: "https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "poster-vintage",
+    label: "Póster vintage",
+    prompt: "A vintage travel poster of Paris in the 1950s, retro illustration style, muted color palette, art deco typography.",
+    image: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "mini-yo",
+    label: "Mini yo",
+    prompt: "A stylized 3D miniature figurine version of a young man holding a coffee cup, Funko Pop art style, clean studio background.",
+    image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "dark-fantasy",
+    label: "Dark Fantasy",
+    prompt: "A powerful dark wizard casting a lightning spell in a gothic cathedral, dramatic rim lighting, concept art, epic fantasy painting.",
+    image: "https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "acuarela",
+    label: "Acuarela",
+    prompt: "A delicate watercolor painting of a hummingbird feeding from a tropical flower, soft washes of color, white paper texture.",
+    image: "https://images.unsplash.com/photo-1490394802706-ba96b0e60b80?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "producto",
+    label: "Fotografía de producto",
+    prompt: "A luxury perfume bottle on a black marble surface, dramatic studio lighting, caustic light reflections, commercial photography.",
+    image: "https://images.unsplash.com/photo-1541643600914-78b084683702?q=80&w=500&auto=format&fit=crop",
+  },
+  {
+    id: "espacio",
+    label: "Espacio",
+    prompt: "An astronaut floating in deep space above a vibrant nebula, cinematic wide shot, photorealistic, epic cosmic atmosphere.",
+    image: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=500&auto=format&fit=crop",
+  },
+] as const;
+
+const SUGGESTIONS_PAGE_SIZE = 5;
+
 
 const ASPECT_OPTIONS = [
   { value: "PORTRAIT" as AspectRatio, label: "9:16", desc: "TikTok/Reels" },
@@ -79,6 +173,17 @@ export default function QuickImagePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [error, setError] = useState("");
+  const [suggestionPage, setSuggestionPage] = useState(0);
+
+  const totalPages = Math.ceil(ALL_SUGGESTIONS.length / SUGGESTIONS_PAGE_SIZE);
+  const visibleSuggestions = ALL_SUGGESTIONS.slice(
+    suggestionPage * SUGGESTIONS_PAGE_SIZE,
+    suggestionPage * SUGGESTIONS_PAGE_SIZE + SUGGESTIONS_PAGE_SIZE,
+  );
+
+  function advanceSuggestions() {
+    setSuggestionPage((prev) => (prev + 1) % totalPages);
+  }
   const [currentGen, setCurrentGen] = useState(0);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -204,21 +309,25 @@ export default function QuickImagePage() {
             <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-white/80 uppercase tracking-wider">Explorar ideas</h2>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => scroll("left")} className="p-2 rounded-full bg-white/5 text-white/60 hover:bg-white/10 transition-colors">
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => scroll("right")} className="p-2 rounded-full bg-white/5 text-white/60 hover:bg-white/10 transition-colors">
-                    <ChevronRight className="h-4 w-4" />
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-white/30">
+                    {suggestionPage + 1} / {totalPages}
+                  </span>
+                  <button
+                    onClick={advanceSuggestions}
+                    className="flex items-center gap-1 text-xs font-medium text-white/50 hover:text-white/80 transition-colors px-2 py-1 rounded-full hover:bg-white/5"
+                  >
+                    Novedades
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
               
-              <div 
+              <div
                 ref={scrollRef}
-                className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide no-scrollbar"
+                className="flex gap-4 overflow-x-auto pb-4 no-scrollbar"
               >
-                {SUGGESTIONS.map((s) => (
+                {visibleSuggestions.map((s) => (
                   <SuggestionCard
                     key={s.id}
                     label={s.label}

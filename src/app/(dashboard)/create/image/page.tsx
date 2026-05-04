@@ -190,22 +190,21 @@ export default function QuickImagePage() {
                 ) : (
                   <img src={firstImage.imageUrl} alt="Generated" className="h-full w-full object-cover" />
                 )}
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                  <a href={`/api/download?url=${encodeURIComponent(firstImage.imageUrl)}`} download className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors">
-                    <Download className="h-4 w-4" />
-                  </a>
-                  <a href={`/create/video?imageUrl=${encodeURIComponent(firstImage.imageUrl)}`} className="flex h-10 px-5 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all font-semibold gap-2 text-sm">
-                    <Zap className="h-3.5 w-3.5" />
-                    Animar
-                  </a>
-                </div>
               </>
             )}
           </div>
 
           {firstImage && !isGenerating && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-white/30">Resultado generado</p>
+              <div className="flex items-center gap-2">
+                <a href={`/api/download?url=${encodeURIComponent(firstImage.imageUrl)}`} download className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
+                  <Download className="h-4 w-4" />
+                </a>
+                <a href={`/create/video?imageUrl=${encodeURIComponent(firstImage.imageUrl)}`} className="flex h-9 px-4 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all font-semibold gap-2 text-xs">
+                  <Zap className="h-3 w-3" />
+                  Animar
+                </a>
+              </div>
               <button onClick={handleReset} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors">
                 <RefreshCw className="h-3.5 w-3.5" />
                 Nueva imagen

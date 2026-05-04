@@ -2,11 +2,10 @@
 
 import { useState, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Download, Zap, Sparkles, RefreshCw, Wand2, Plus, X, Image as ImageIcon } from "lucide-react";
+import { Download, Zap, Sparkles, RefreshCw, Wand2, Plus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 import { DiagramOverlay, type DiagramLabel } from "@/components/DiagramOverlay";
-import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AcceptedImageType } from "@/lib/prompt-constants";
 
 type AspectRatio = "LANDSCAPE" | "PORTRAIT" | "SQUARE";
 
@@ -82,34 +81,16 @@ export default function QuickImagePage() {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [error, setError]                     = useState("");
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
+  const [referenceImage, setReferenceImage]   = useState<File | null>(null);
+  const [referencePreview, setReferencePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [imageBase64, setImageBase64]         = useState<string | null>(null);
-  const [imageMediaType, setImageMediaType]   = useState<AcceptedImageType | null>(null);
-  const fileInputRef                          = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type as AcceptedImageType)) {
-      setError("Formato de imagen no soportado (usa JPG, PNG, WEBP o GIF).");
-      return;
+    if (file) {
+      setReferenceImage(file);
+      setReferencePreview(URL.createObjectURL(file));
     }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError("La imagen es demasiado grande (máx 4MB).");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setImageBase64(base64);
-      setImageMediaType(file.type as AcceptedImageType);
-      setError("");
-    };
-    reader.readAsDataURL(file);
-    
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   async function handleGenerate(promptToUse?: string) {
@@ -119,6 +100,19 @@ export default function QuickImagePage() {
     setError("");
     setGeneratedImages([]);
     try {
+      let imageBase64: string | undefined;
+      let imageMediaType: string | undefined;
+
+      if (referenceImage) {
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(referenceImage);
+        });
+        imageBase64 = await base64Promise;
+        imageMediaType = referenceImage.type;
+      }
+
       const promptRes = await fetch("/api/generate/prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,7 +120,8 @@ export default function QuickImagePage() {
           prompt: finalPrompt, 
           aspectRatio, 
           ...(selectedStyleId && { styleId: selectedStyleId }),
-          ...(imageBase64 && { imageBase64, imageMediaType })
+          ...(imageBase64 && { imageBase64 }),
+          ...(imageMediaType && { imageMediaType }),
         }),
       });
       const promptData = await promptRes.json() as {
@@ -174,7 +169,6 @@ export default function QuickImagePage() {
 
   function handleReset() {
     setDescription(""); setGeneratedImages([]); setError(""); setSelectedStyleId(null);
-    setImageBase64(null); setImageMediaType(null);
   }
 
   const firstImage  = generatedImages[0];
@@ -265,62 +259,59 @@ export default function QuickImagePage() {
         </div>
       </div>
 
-      <div className="flex-shrink-0 px-4 py-3 border-t border-white/5 bg-[#070709]">
-        {selectedStyleId && (
-          <div className="mx-auto max-w-2xl flex items-center gap-2 mb-2">
-            <span className="text-[10px] text-white/30">Estilo:</span>
-            <span className="text-[10px] font-semibold text-primary/90 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-              {ALL_STYLES.find((s) => s.id === selectedStyleId)?.label}
-            </span>
-            <button type="button" onClick={() => setSelectedStyleId(null)} className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none">×</button>
+      <div className="flex-shrink-0 px-4 py-2 border-t border-white/5 bg-[#070709] relative">
+        <div className="mx-auto max-w-2xl flex flex-col gap-2">
+          {/* Fila de chips (estilo e imagen adjunta) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {selectedStyleId && (
+              <div className="flex items-center gap-2 bg-[#1c1c1e] border border-white/10 rounded-full px-2.5 py-1">
+                <span className="text-[10px] text-white/30">Estilo:</span>
+                <span className="text-[10px] font-semibold text-primary/90 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                  {ALL_STYLES.find((s) => s.id === selectedStyleId)?.label}
+                </span>
+                <button type="button" onClick={() => setSelectedStyleId(null)} className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none">×</button>
+              </div>
+            )}
+            {referencePreview && (
+              <div className="flex items-center gap-2 bg-[#1c1c1e] border border-white/10 rounded-full pr-2.5 pl-1 py-1">
+                <img src={referencePreview} alt="Ref" className="h-4 w-4 object-cover rounded-full" />
+                <span className="text-[10px] text-white/30">Referencia adjunta</span>
+                <button type="button" onClick={() => { setReferenceImage(null); setReferencePreview(null); }} className="text-[10px] text-white/20 hover:text-white/60 transition-colors leading-none">×</button>
+              </div>
+            )}
           </div>
-        )}
-        
-        {imageBase64 && (
-          <div className="mx-auto max-w-2xl flex items-center gap-2 mb-2">
-            <div className="relative w-16 h-16 rounded-md overflow-hidden border border-white/10 group">
-              <img src={imageBase64} alt="Referencia" className="w-full h-full object-cover" />
-              <button
-                onClick={() => { setImageBase64(null); setImageMediaType(null); }}
-                className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="h-4 w-4 text-white" />
-              </button>
-            </div>
+          
+          <div className="flex items-end gap-2 rounded-xl bg-[#1c1c1e] border border-white/10 px-3 py-2 focus-within:border-primary/50 transition-colors">
+            <button 
+              type="button" 
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-shrink-0 h-7 w-7 mb-1 flex items-center justify-center rounded-full bg-[#2c2c2e] border border-white/10 text-white/40 hover:text-white/70 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              hidden 
+              accept="image/png, image/jpeg, image/webp" 
+              onChange={handleImageSelect}
+            />
+            <textarea
+              placeholder="Describe tu imagen..."
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+              }}
+              rows={1}
+              style={{ minHeight: "22px", maxHeight: "120px" }}
+              className="flex-1 resize-none bg-transparent text-white/90 placeholder:text-white/20 text-sm outline-none leading-snug py-1.5"
+            />
+            <button type="button" onClick={() => handleGenerate()} disabled={!description.trim() || isGenerating} className="flex-shrink-0 h-9 w-9 mb-0.5 flex items-center justify-center rounded-full bg-primary text-white disabled:opacity-30 hover:bg-primary-hover transition-colors">
+              {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            </button>
           </div>
-        )}
-
-        <div className="mx-auto max-w-2xl flex items-end gap-2 rounded-xl bg-[#1c1c1e] border border-white/10 px-3 py-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept={ACCEPTED_IMAGE_TYPES.join(",")}
-            className="hidden"
-          />
-          <button 
-            type="button" 
-            onClick={() => fileInputRef.current?.click()}
-            title="Añadir imagen de referencia"
-            className="flex-shrink-0 h-8 w-8 mb-0.5 flex items-center justify-center rounded-full bg-[#2c2c2e] border border-white/10 text-white/40 hover:text-white/70 transition-colors"
-          >
-            {imageBase64 ? <ImageIcon className="h-4 w-4 text-primary" /> : <Plus className="h-4 w-4" />}
-          </button>
-          <textarea
-            placeholder="Describe tu imagen o diagrama..."
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              e.target.style.height = "22px";
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-            }}
-            rows={1}
-            style={{ minHeight: "22px" }}
-            className="flex-1 py-1 resize-none bg-transparent text-white/90 placeholder:text-white/20 text-sm outline-none leading-snug no-scrollbar"
-          />
-          <button type="button" onClick={() => handleGenerate()} disabled={!description.trim() || isGenerating} className="flex-shrink-0 h-9 w-9 mb-[1px] flex items-center justify-center rounded-full bg-primary text-white disabled:opacity-30 hover:bg-primary-hover transition-colors">
-            {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          </button>
         </div>
       </div>
     </div>

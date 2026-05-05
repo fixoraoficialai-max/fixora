@@ -1,17 +1,18 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Users, Zap, Download, RefreshCw } from "lucide-react";
+import { Users, Zap, Download, RefreshCw, Smartphone, Monitor, Square } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/TopBar";
+import { cn } from "@/lib/utils";
 import {
   UploadCard,
   ImagePreview,
   VideoPreview,
   EMPTY_UPLOAD,
-  type UploadState
+  type UploadState,
 } from "@/components/shared/media-upload";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -24,7 +25,39 @@ const MAX_POLLS = 60;
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Phase = "idle" | "submitted" | "polling" | "done" | "error";
+type AspectRatio = "9:16" | "16:9" | "1:1";
 
+// ─── Aspect ratio config ──────────────────────────────────────────────────────
+
+const RATIO_OPTIONS: {
+  value: AspectRatio;
+  label: string;
+  desc: string;
+  icon: React.ReactNode;
+  canvasClass: string;
+}[] = [
+  {
+    value: "9:16",
+    label: "9:16",
+    desc: "TikTok / Reels",
+    icon: <Smartphone className="h-3.5 w-3.5" />,
+    canvasClass: "max-w-[260px] aspect-[9/16]",
+  },
+  {
+    value: "16:9",
+    label: "16:9",
+    desc: "YouTube",
+    icon: <Monitor className="h-3.5 w-3.5" />,
+    canvasClass: "w-full aspect-[16/9]",
+  },
+  {
+    value: "1:1",
+    label: "1:1",
+    desc: "Post",
+    icon: <Square className="h-3.5 w-3.5" />,
+    canvasClass: "max-w-[340px] aspect-square",
+  },
+];
 
 // ─── API helpers ─────────────────────────────────────────────────────────────
 
@@ -32,7 +65,7 @@ async function uploadToServer(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch("/api/upload", { method: "POST", body: form });
-  const data = await res.json() as {
+  const data = (await res.json()) as {
     success: boolean;
     data?: { fileUrl: string };
     error?: { message: string };
@@ -46,14 +79,15 @@ async function uploadToServer(file: File): Promise<string> {
 async function submitCloneJob(
   characterImageUrl: string,
   motionVideoUrl: string,
-  prompt: string
+  prompt: string,
+  aspectRatio: AspectRatio
 ): Promise<{ jobId: string; requestId: string }> {
   const res = await fetch("/api/clone/submit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ characterImageUrl, motionVideoUrl, prompt }),
+    body: JSON.stringify({ characterImageUrl, motionVideoUrl, prompt, aspectRatio }),
   });
-  const data = await res.json() as {
+  const data = (await res.json()) as {
     success: boolean;
     data?: { jobId: string; requestId: string };
     error?: { message: string };
@@ -73,7 +107,7 @@ async function checkCloneStatus(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jobId, requestId }),
   });
-  const data = await res.json() as {
+  const data = (await res.json()) as {
     success: boolean;
     data?: { status: string; videoUrl?: string; reason?: string };
     error?: { message: string };
@@ -82,9 +116,13 @@ async function checkCloneStatus(
   return data.data ?? { status: "PENDING" };
 }
 
-// ─── Validation (client-side pre-check — server does the real conversion) ────
+// ─── Validation ───────────────────────────────────────────────────────────────
 
-function validateImageFile(file: File, tCloneErrorImageType: string, tCloneErrorImageSize: string): string | null {
+function validateImageFile(
+  file: File,
+  tCloneErrorImageType: string,
+  tCloneErrorImageSize: string
+): string | null {
   const name = file.name.toLowerCase();
   const isHeic = name.endsWith(".heic") || name.endsWith(".heif");
   const isImage = file.type.startsWith("image/") || isHeic;
@@ -93,7 +131,11 @@ function validateImageFile(file: File, tCloneErrorImageType: string, tCloneError
   return null;
 }
 
-function validateVideoFile(file: File, tCloneErrorVideoType: string, tCloneErrorVideoSize: string): string | null {
+function validateVideoFile(
+  file: File,
+  tCloneErrorVideoType: string,
+  tCloneErrorVideoSize: string
+): string | null {
   if (!file.type.startsWith("video/")) return tCloneErrorVideoType;
   if (file.size > MAX_VIDEO_BYTES) return tCloneErrorVideoSize;
   return null;
@@ -107,6 +149,7 @@ export default function ClonePage() {
   const [character, setCharacter] = useState<UploadState>(EMPTY_UPLOAD);
   const [motion, setMotion] = useState<UploadState>(EMPTY_UPLOAD);
   const [prompt, setPrompt] = useState("");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [phase, setPhase] = useState<Phase>("idle");
   const [statusMsg, setStatusMsg] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -121,14 +164,16 @@ export default function ClonePage() {
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
   }
 
-  // ─── Upload handlers ────────────────────────────────────────────────────────
+  // ─── Upload handlers ──────────────────────────────────────────────────────
 
   async function handleCharacterFile(file: File) {
     const err = validateImageFile(file, t("cloneErrorImageType"), t("cloneErrorImageSize"));
     if (err) { setError(err); return; }
     setError("");
 
-    const isHeic = file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif");
+    const isHeic =
+      file.name.toLowerCase().endsWith(".heic") ||
+      file.name.toLowerCase().endsWith(".heif");
     const preview = isHeic ? "__heic__" : URL.createObjectURL(file);
 
     setCharacter({ url: "", preview, uploading: true, fileName: file.name });
@@ -158,7 +203,7 @@ export default function ClonePage() {
     }
   }
 
-  // ─── Polling ────────────────────────────────────────────────────────────────
+  // ─── Polling ──────────────────────────────────────────────────────────────
 
   const startPolling = useCallback((jobId: string, requestId: string) => {
     pollCountRef.current = 0;
@@ -200,7 +245,7 @@ export default function ClonePage() {
     pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
   }, []);
 
-  // ─── Generate ───────────────────────────────────────────────────────────────
+  // ─── Generate ─────────────────────────────────────────────────────────────
 
   async function handleGenerate() {
     if (!character.url) { setError(t("cloneErrorNoChar")); return; }
@@ -216,7 +261,8 @@ export default function ClonePage() {
       const { jobId, requestId } = await submitCloneJob(
         character.url,
         motion.url,
-        prompt.trim()
+        prompt.trim(),
+        aspectRatio
       );
       startPolling(jobId, requestId);
     } catch (e) {
@@ -225,11 +271,12 @@ export default function ClonePage() {
     }
   }
 
-  // ─── Reset ──────────────────────────────────────────────────────────────────
+  // ─── Reset ────────────────────────────────────────────────────────────────
 
   function reset() {
     clearPollTimer();
-    if (character.preview && character.preview !== "__heic__") URL.revokeObjectURL(character.preview);
+    if (character.preview && character.preview !== "__heic__")
+      URL.revokeObjectURL(character.preview);
     if (motion.preview) URL.revokeObjectURL(motion.preview);
     setCharacter(EMPTY_UPLOAD);
     setMotion(EMPTY_UPLOAD);
@@ -243,7 +290,7 @@ export default function ClonePage() {
     if (motionInputRef.current) motionInputRef.current.value = "";
   }
 
-  // ─── Derived state ───────────────────────────────────────────────────────────
+  // ─── Derived state ────────────────────────────────────────────────────────
 
   const isProcessing = phase === "submitted" || phase === "polling";
   const canGenerate =
@@ -254,7 +301,9 @@ export default function ClonePage() {
     !motion.uploading &&
     !isProcessing;
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  const activeRatio = RATIO_OPTIONS.find((r) => r.value === aspectRatio)!;
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -267,128 +316,167 @@ export default function ClonePage() {
             </div>
           )}
 
-      <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5">
 
-        {/* ── Upload row ── */}
-        <div className="grid grid-cols-2 gap-4">
+            {/* ── Upload row ── */}
+            <div className="grid grid-cols-2 gap-4">
 
-          {/* Character image — accepts HEIC, converted on server */}
-          <UploadCard
-            label={t("cloneCharLabel")}
-            hint={t("cloneCharHint")}
-            icon={<Users className="h-4 w-4 text-primary-light" />}
-            dropLabel={<>Sube imagen<br />del personaje<br /><span className="text-[10px] opacity-60">JPG, PNG, HEIC</span></>}
-            state={character}
-            accept="image/jpeg, image/png, image/webp, image/heic, image/heif, .heic, .heif"
-            inputRef={charInputRef}
-            disabled={isProcessing}
-            renderPreview={(state) => <ImagePreview state={state} />}
-            onFile={handleCharacterFile}
-            onClear={() => {
-              if (character.preview && character.preview !== "__heic__") URL.revokeObjectURL(character.preview);
-              setCharacter(EMPTY_UPLOAD);
-              if (charInputRef.current) charInputRef.current.value = "";
-            }}
-          />
+              {/* Character image — accepts HEIC, converted on server */}
+              <UploadCard
+                label={t("cloneCharLabel")}
+                hint={t("cloneCharHint")}
+                icon={<Users className="h-4 w-4 text-primary-light" />}
+                dropLabel={<>Sube imagen<br />del personaje<br /><span className="text-[10px] opacity-60">JPG, PNG, HEIC</span></>}
+                state={character}
+                accept="image/jpeg, image/png, image/webp, image/heic, image/heif, .heic, .heif"
+                inputRef={charInputRef}
+                disabled={isProcessing}
+                renderPreview={(state) => <ImagePreview state={state} />}
+                onFile={handleCharacterFile}
+                onClear={() => {
+                  if (character.preview && character.preview !== "__heic__")
+                    URL.revokeObjectURL(character.preview);
+                  setCharacter(EMPTY_UPLOAD);
+                  if (charInputRef.current) charInputRef.current.value = "";
+                }}
+              />
 
-          <UploadCard
-            label={t("cloneMotionLabel")}
-            hint={t("cloneMotionHint")}
-            icon={<Zap className="h-4 w-4 text-warning" />}
-            dropLabel={<>Sube video<br />de movimiento<br /><span className="text-[10px] opacity-60">MP4, MOV, WebM</span></>}
-            state={motion}
-            accept="video/*"
-            inputRef={motionInputRef}
-            disabled={isProcessing}
-            renderPreview={(state) => <VideoPreview state={state} />}
-            onFile={handleMotionFile}
-            onClear={() => {
-              if (motion.preview) URL.revokeObjectURL(motion.preview);
-              setMotion(EMPTY_UPLOAD);
-              if (motionInputRef.current) motionInputRef.current.value = "";
-            }}
-          />
-        </div>
-
-        {/* ── Prompt & actions ── */}
-        <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
-          <FormField
-            label={t("clonePromptLabel")}
-            required
-            hint={t("clonePromptHint")}
-          >
-            <Textarea
-              placeholder={t("clonePromptPlaceholder")}
-              rows={3}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={isProcessing}
-            />
-          </FormField>
-
-          <div className="flex items-center justify-between pt-1 border-t border-border">
-            <p className="text-xs text-text-muted">
-              Costo: <span className="text-warning font-medium">{t("cloneCost")}</span>
-            </p>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={reset} disabled={isProcessing}>
-                <RefreshCw className="h-4 w-4" />
-                {t("clear")}
-              </Button>
-              <Button onClick={handleGenerate} disabled={!canGenerate} isLoading={isProcessing}>
-                <Users className="h-4 w-4" />
-                {isProcessing ? statusMsg || "Procesando…" : t("cloneGenerate")}
-              </Button>
+              <UploadCard
+                label={t("cloneMotionLabel")}
+                hint={t("cloneMotionHint")}
+                icon={<Zap className="h-4 w-4 text-warning" />}
+                dropLabel={<>Sube video<br />de movimiento<br /><span className="text-[10px] opacity-60">MP4, MOV, WebM</span></>}
+                state={motion}
+                accept="video/*"
+                inputRef={motionInputRef}
+                disabled={isProcessing}
+                renderPreview={(state) => <VideoPreview state={state} />}
+                onFile={handleMotionFile}
+                onClear={() => {
+                  if (motion.preview) URL.revokeObjectURL(motion.preview);
+                  setMotion(EMPTY_UPLOAD);
+                  if (motionInputRef.current) motionInputRef.current.value = "";
+                }}
+              />
             </div>
-          </div>
-        </div>
 
-        {/* ── Processing status ── */}
-        {isProcessing && (
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 flex flex-col items-center gap-3">
-            <Zap className="h-8 w-8 text-primary-light animate-pulse" />
-            <p className="text-sm font-medium text-text-primary">{statusMsg}</p>
-            <p className="text-xs text-text-muted text-center">
-              {t("generationWait")}
-            </p>
-            <p className="text-xs text-success">
-              {t("creditsOnSuccess")}
-            </p>
-          </div>
-        )}
-
-        {/* ── Result ── */}
-        {phase === "done" && videoUrl && (
-          <div className="rounded-xl border border-border overflow-hidden">
-            <video
-              src={`/api/download?url=${encodeURIComponent(videoUrl)}&type=video&stream=1`}
-              controls
-              autoPlay
-              loop
-              playsInline
-              className="w-full"
-            />
-            <div className="flex items-center justify-between px-4 py-3 bg-surface-elevated border-t border-border">
-              <p className="text-xs text-success font-medium">{t("cloneDone")}</p>
-              <div className="flex gap-2">
-                <a href={`/api/download?url=${encodeURIComponent(videoUrl)}&type=video`} download>
-                  <Button variant="secondary" size="sm">
-                    <Download className="h-3.5 w-3.5" />
-                    {t("download")}
-                  </Button>
-                </a>
-                <Button variant="secondary" size="sm" onClick={reset}>
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  {t("newOne")}
-                </Button>
+            {/* ── Aspect ratio selector ── */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                Formato de salida
+              </p>
+              <div className="flex items-center gap-2">
+                {RATIO_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setAspectRatio(opt.value)}
+                    disabled={isProcessing}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium transition-all",
+                      aspectRatio === opt.value
+                        ? "border-primary/50 bg-primary/10 text-primary-light shadow-[0_0_12px_rgba(124,58,237,0.2)]"
+                        : "border-border text-text-muted hover:border-border-strong hover:text-text-primary disabled:opacity-40"
+                    )}
+                  >
+                    {opt.icon}
+                    <span className="font-semibold">{opt.label}</span>
+                    <span className="opacity-50 text-[10px]">{opt.desc}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
-        )}
 
+            {/* ── Prompt & actions ── */}
+            <div className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-4">
+              <FormField
+                label={t("clonePromptLabel")}
+                required
+                hint={t("clonePromptHint")}
+              >
+                <Textarea
+                  placeholder={t("clonePromptPlaceholder")}
+                  rows={3}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  disabled={isProcessing}
+                />
+              </FormField>
+
+              <div className="flex items-center justify-between pt-1 border-t border-border">
+                <p className="text-xs text-text-muted">
+                  Costo: <span className="text-warning font-medium">{t("cloneCost")}</span>
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={reset} disabled={isProcessing}>
+                    <RefreshCw className="h-4 w-4" />
+                    {t("clear")}
+                  </Button>
+                  <Button onClick={handleGenerate} disabled={!canGenerate} isLoading={isProcessing}>
+                    <Users className="h-4 w-4" />
+                    {isProcessing ? statusMsg || "Procesando…" : t("cloneGenerate")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Processing status ── */}
+            {isProcessing && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 flex flex-col items-center gap-3">
+                <Zap className="h-8 w-8 text-primary-light animate-pulse" />
+                <p className="text-sm font-medium text-text-primary">{statusMsg}</p>
+                <p className="text-xs text-text-muted text-center">
+                  {t("generationWait")}
+                </p>
+                <p className="text-xs text-success">{t("creditsOnSuccess")}</p>
+              </div>
+            )}
+
+            {/* ── Result ── */}
+            {phase === "done" && videoUrl && (
+              <div className="flex flex-col items-center gap-4">
+                {/* Video preview with dynamic aspect ratio */}
+                <div
+                  className={cn(
+                    "mx-auto w-full overflow-hidden rounded-2xl border border-border bg-black shadow-2xl",
+                    activeRatio.canvasClass
+                  )}
+                >
+                  <video
+                    src={`/api/download?url=${encodeURIComponent(videoUrl)}&type=video&stream=1`}
+                    controls
+                    autoPlay
+                    loop
+                    playsInline
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                {/* Actions row */}
+                <div className="w-full flex items-center justify-between px-1">
+                  <p className="text-xs text-success font-medium">{t("cloneDone")}</p>
+                  <div className="flex gap-2">
+                    <a
+                      href={`/api/download?url=${encodeURIComponent(videoUrl)}&type=video`}
+                      download
+                    >
+                      <Button variant="secondary" size="sm">
+                        <Download className="h-3.5 w-3.5" />
+                        {t("download")}
+                      </Button>
+                    </a>
+                    <Button variant="secondary" size="sm" onClick={reset}>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      {t("newOne")}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </div>
-  </div>
   );
 }

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const parsed = cloneSubmitSchema.safeParse(body);
   if (!parsed.success) return ApiErrors.validation(parsed.error.flatten().fieldErrors);
 
-  const { characterImageUrl, motionVideoUrl, prompt } = parsed.data;
+  const { characterImageUrl, motionVideoUrl, prompt, aspectRatio } = parsed.data;
   const userId = session.user.id;
 
   // Atomic credit reservation — prevents race conditions on simultaneous requests
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       video_url: motionVideoUrl,
       prompt,
       character_orientation: "video" as const, // SDK requires "video" | "image" — not plain string
+      aspect_ratio: aspectRatio,
     };
     const { request_id } = await fal.queue.submit(FAL_MODEL, {
       input: falInput,

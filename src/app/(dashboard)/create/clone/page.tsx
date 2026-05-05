@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Users, Zap, Download, RefreshCw, Smartphone, Monitor, Square } from "lucide-react";
+import { Users, Zap, Download, RefreshCw, Smartphone, Monitor, Square, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea, FormField } from "@/components/ui/input";
@@ -33,28 +33,28 @@ const RATIO_OPTIONS: {
   value: AspectRatio;
   label: string;
   desc: string;
-  icon: React.ReactNode;
+  Icon: LucideIcon;
   canvasClass: string;
 }[] = [
   {
     value: "9:16",
     label: "9:16",
     desc: "TikTok / Reels",
-    icon: <Smartphone className="h-3.5 w-3.5" />,
+    Icon: Smartphone,
     canvasClass: "max-w-[260px] aspect-[9/16]",
   },
   {
     value: "16:9",
     label: "16:9",
     desc: "YouTube",
-    icon: <Monitor className="h-3.5 w-3.5" />,
+    Icon: Monitor,
     canvasClass: "w-full aspect-[16/9]",
   },
   {
     value: "1:1",
     label: "1:1",
     desc: "Post",
-    icon: <Square className="h-3.5 w-3.5" />,
+    Icon: Square,
     canvasClass: "max-w-[340px] aspect-square",
   },
 ];
@@ -379,7 +379,7 @@ export default function ClonePage() {
                         : "border-border text-text-muted hover:border-border-strong hover:text-text-primary disabled:opacity-40"
                     )}
                   >
-                    {opt.icon}
+                    <opt.Icon className="h-3.5 w-3.5" />
                     <span className="font-semibold">{opt.label}</span>
                     <span className="opacity-50 text-[10px]">{opt.desc}</span>
                   </button>
